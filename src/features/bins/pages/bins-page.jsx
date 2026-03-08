@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Search, Trash2, Wifi, WifiOff } from "lucide-react";
+import { Link } from "react-router";
 import axiosClient from "@/lib/axios";
 
 const fallbackBins = [
@@ -84,12 +85,12 @@ function BinsPage() {
             Refresh
           </button>
 
-          <button
-            type="button"
+          <Link
+            to="/bins/new"
             className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
           >
             Add Bin
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -155,12 +156,12 @@ function BinsPage() {
                   <td className="px-4 py-4 text-sm text-slate-500">{bin.lastSeen || "N/A"}</td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
+                      <Link
+                        to={`/bins/${bin._id || bin.publicId}`}
                         className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
                       >
                         View
-                      </button>
+                      </Link>
                       <button
                         type="button"
                         className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"

@@ -2,7 +2,9 @@ import { Navigate, Route, Routes } from "react-router";
 import AppLayout from "@/components/layout/app-layout";
 import DashboardPage from "@/features/dashboard/pages/dashboard-page";
 import AreasPage from "@/features/areas/pages/areas-page";
+import CreateAreaPage from "@/features/areas/pages/create-area-page";
 import BinsPage from "@/features/bins/pages/bins-page";
+import CreateBinPage from "@/features/bins/pages/create-bin-page";
 import BinDetailsPage from "@/features/bins/pages/bin-details-page";
 import AlertsPage from "@/features/alerts/pages/alerts-page";
 import TelemetryPage from "@/features/telemetry/pages/telemetry-page";
@@ -26,7 +28,9 @@ function AppRouter() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="areas" element={<AreasPage />} />
+        <Route path="areas/new" element={<CreateAreaPage />} />
         <Route path="bins" element={<BinsPage />} />
+        <Route path="bins/new" element={<CreateBinPage />} />
         <Route path="bins/:binId" element={<BinDetailsPage />} />
         <Route path="telemetry" element={<TelemetryPage />} />
         <Route path="alerts" element={<AlertsPage />} />
