@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getStoredToken, clearAuthStorage } from "@/services/storage/token-storage";
 
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
@@ -10,7 +11,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("smart_bin_token");
+    const token = getStoredToken();
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -24,6 +25,10 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error?.response?.status === 401) {
+      clearAuthStorage();
+    }
+
     return Promise.reject(error);
   },
 );
