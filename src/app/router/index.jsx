@@ -1,7 +1,9 @@
 import { Navigate, Route, Routes } from "react-router";
 import PublicRoute from "@/components/auth/public-route";
 import ProtectedRoute from "@/components/auth/protected-route";
+import RoleRoute from "@/components/auth/role-route";
 import AppLayout from "@/components/layout/app-layout";
+import { PERMISSIONS } from "@/constants/permissions";
 import DashboardPage from "@/features/dashboard/pages/dashboard-page";
 import AreasPage from "@/features/areas/pages/areas-page";
 import CreateAreaPage from "@/features/areas/pages/create-area-page";
@@ -23,6 +25,8 @@ import SecurityPage from "@/features/security/pages/security-page";
 import AppearancePage from "@/features/appearance/pages/appearance-page";
 import LoginPage from "@/features/auth/pages/login-page";
 import ForgotPasswordPage from "@/features/auth/pages/forgot-password-page";
+import NotFoundPage from "@/features/system/pages/not-found-page";
+import AccessDeniedPage from "@/features/system/pages/access-denied-page";
 
 function AppRouter() {
   return (
@@ -32,36 +36,79 @@ function AppRouter() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       </Route>
 
+      <Route path="/access-denied" element={<AccessDeniedPage />} />
+
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
 
-          <Route path="areas" element={<AreasPage />} />
-          <Route path="areas/new" element={<CreateAreaPage />} />
-          <Route path="areas/:areaId" element={<AreaDetailsPage />} />
-          <Route path="areas/:areaId/edit" element={<EditAreaPage />} />
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_DASHBOARD]} />}>
+            <Route path="dashboard" element={<DashboardPage />} />
+          </Route>
 
-          <Route path="bins" element={<BinsPage />} />
-          <Route path="bins/new" element={<CreateBinPage />} />
-          <Route path="bins/:binId" element={<BinDetailsPage />} />
-          <Route path="bins/:binId/edit" element={<EditBinPage />} />
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_AREAS]} />}>
+            <Route path="areas" element={<AreasPage />} />
+            <Route path="areas/:areaId" element={<AreaDetailsPage />} />
+          </Route>
 
-          <Route path="telemetry" element={<TelemetryPage />} />
-          <Route path="alerts" element={<AlertsPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.MANAGE_AREAS]} />}>
+            <Route path="areas/new" element={<CreateAreaPage />} />
+            <Route path="areas/:areaId/edit" element={<EditAreaPage />} />
+          </Route>
 
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="settings/profile" element={<ProfilePage />} />
-          <Route path="settings/notifications" element={<NotificationsPage />} />
-          <Route path="settings/users" element={<UsersPage />} />
-          <Route path="settings/roles" element={<RolesPage />} />
-          <Route path="settings/security" element={<SecurityPage />} />
-          <Route path="settings/appearance" element={<AppearancePage />} />
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_BINS]} />}>
+            <Route path="bins" element={<BinsPage />} />
+            <Route path="bins/:binId" element={<BinDetailsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.MANAGE_BINS]} />}>
+            <Route path="bins/new" element={<CreateBinPage />} />
+            <Route path="bins/:binId/edit" element={<EditBinPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_TELEMETRY]} />}>
+            <Route path="telemetry" element={<TelemetryPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_ALERTS]} />}>
+            <Route path="alerts" element={<AlertsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_ANALYTICS]} />}>
+            <Route path="analytics" element={<AnalyticsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_SETTINGS]} />}>
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_PROFILE]} />}>
+            <Route path="settings/profile" element={<ProfilePage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_NOTIFICATIONS]} />}>
+            <Route path="settings/notifications" element={<NotificationsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_USERS]} />}>
+            <Route path="settings/users" element={<UsersPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_ROLES]} />}>
+            <Route path="settings/roles" element={<RolesPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_SECURITY]} />}>
+            <Route path="settings/security" element={<SecurityPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_APPEARANCE]} />}>
+            <Route path="settings/appearance" element={<AppearancePage />} />
+          </Route>
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
