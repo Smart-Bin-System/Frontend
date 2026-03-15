@@ -1,7 +1,7 @@
 import { CheckCircle2, Mail, MapPinned, Phone, Shield, UserCircle2, XCircle } from "lucide-react";
 import PageHeader from "@/components/ui/page-header";
 import SectionCard from "@/components/ui/card/section-card";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 import { ROLE_LABELS, ROLES } from "@/constants/roles";
 
 function ProfilePage() {

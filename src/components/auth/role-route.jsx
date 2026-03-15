@@ -1,5 +1,5 @@
 import { Navigate, Outlet } from "react-router";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 import { hasAnyPermission } from "@/lib/rbac";
 
 function RoleRoute({ requiredPermissions = [] }) {

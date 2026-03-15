@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import AuthShell from "@/components/auth/auth-shell";
 import FormInput from "@/components/ui/input/form-input";
 import Toast from "@/components/ui/toast";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 import { loginUser } from "@/features/auth/api/login";
 import { loginSchema } from "@/features/auth/schemas/login-schema";
 

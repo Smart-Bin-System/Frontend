@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { LogOut, Settings, ShieldCheck, UserCircle2, Users } from "lucide-react";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 import { PERMISSIONS } from "@/constants/permissions";
 import { hasPermission } from "@/lib/rbac";
 import { ROLE_LABELS } from "@/constants/roles";

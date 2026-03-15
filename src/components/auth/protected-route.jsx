@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 
 function ProtectedRoute() {
   const { isAuthenticated, isBootstrapping } = useAuth();

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import HeaderNotificationsDropdown from "@/components/layout/header-notifications-dropdown";
 import HeaderProfileDropdown from "@/components/layout/header-profile-dropdown";
-import { useAuth } from "@/context/auth-context";
+import { useAuth } from "@/hooks/use-auth";
 import { ROLE_LABELS } from "@/constants/roles";
 import { Bell, Menu, Search } from "lucide-react";
 
@@ -46,9 +46,13 @@ function AppLayout() {
   const initials = getInitials(displayName);
 
   useEffect(() => {
-    setNotificationsOpen(false);
-    setProfileOpen(false);
-    setMobileOpen(false);
+    const resetMenus = () => {
+      setNotificationsOpen(false);
+      setProfileOpen(false);
+      setMobileOpen(false);
+    };
+
+    resetMenus();
   }, [location.pathname]);
 
   return (
