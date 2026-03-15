@@ -1,19 +1,66 @@
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useState } from "react";
 import AuthShell from "@/components/auth/auth-shell";
 import FormInput from "@/components/ui/input/form-input";
+import Toast from "@/components/ui/toast";
+import { useAuth } from "@/context/auth-context";
+import { loginUser } from "@/features/auth/api/login";
 
 function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
   const [showPassword, setShowPassword] = useState(false);
+  const [values, setValues] = useState({
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const fakeRegister = () => ({});
-  const fakeErrors = {};
+  const redirectTo = location.state?.from?.pathname || "/dashboard";
 
-  const handleSubmit = (event) => {
+  const fakeRegister = (name) => ({
+    name,
+    value: values[name],
+    onChange: (event) =>
+      setValues((prev) => ({
+        ...prev,
+        [name]: event.target.value,
+      })),
+  });
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    navigate("/dashboard");
+    setError("");
+    setIsSubmitting(true);
+
+    try {
+      const response = await loginUser(values);
+
+      const resolvedToken = response?.token || response?.data?.token || "demo-token";
+
+      const resolvedUser = response?.user ||
+        response?.data?.user || {
+          id: "1",
+          name: "Mihashi",
+          email: values.email,
+          role: "admin",
+        };
+
+      login({
+        token: resolvedToken,
+        user: resolvedUser,
+      });
+
+      navigate(redirectTo, { replace: true });
+    } catch {
+      setError("Login failed. Please check your credentials and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -33,13 +80,14 @@ function LoginPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-5">
+        {error ? <Toast variant="error" title="Authentication failed" description={error} /> : null}
+
         <FormInput
           label="Email"
           name="email"
           type="email"
           placeholder="admin@example.com"
           register={fakeRegister}
-          error={fakeErrors.email?.message}
         />
 
         <div className="space-y-2">
@@ -50,7 +98,15 @@ function LoginPage() {
           <div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-3">
             <input
               id="password"
+              name="password"
               type={showPassword ? "text" : "password"}
+              value={values.password}
+              onChange={(event) =>
+                setValues((prev) => ({
+                  ...prev,
+                  password: event.target.value,
+                }))
+              }
               placeholder="Enter your password"
               className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
             />
@@ -81,10 +137,11 @@ function LoginPage() {
 
         <button
           type="submit"
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700"
+          disabled={isSubmitting}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <LogIn className="h-4 w-4" />
-          Sign in
+          {isSubmitting ? "Signing in..." : "Sign in"}
         </button>
       </form>
     </AuthShell>

@@ -5,19 +5,20 @@ import SectionCard from "@/components/ui/card/section-card";
 import StatusCard from "@/components/ui/card/status-card";
 import FilterChips from "@/components/ui/filter-chips";
 import EmptyState from "@/components/ui/empty-state";
+import { ROLE_LABELS, ROLES } from "@/constants/roles";
 
 const roleStats = [
   {
     title: "Total Roles",
-    value: "4",
-    description: "Defined access profiles",
+    value: "3",
+    description: "Defined access roles",
     icon: ShieldCheck,
     iconClassName: "bg-emerald-100 text-emerald-700",
   },
   {
     title: "Permission Groups",
-    value: "12",
-    description: "Feature access groupings",
+    value: "6",
+    description: "Operational and administrative access groups",
     icon: KeyRound,
     iconClassName: "bg-amber-100 text-amber-700",
   },
@@ -26,48 +27,73 @@ const roleStats = [
 const roles = [
   {
     id: 1,
-    name: "Admin",
-    scope: "Full access",
+    name: ROLES.SUPERADMIN,
+    scope: "Full system control",
     permissions: [
-      "Dashboard",
-      "Areas",
-      "Bins",
-      "Telemetry",
-      "Alerts",
-      "Analytics",
-      "Users",
-      "Roles",
+      "Full dashboard access",
+      "Manage areas",
+      "Manage bins",
+      "View telemetry",
+      "View alerts",
+      "View analytics",
+      "Manage users",
+      "Manage roles",
+      "Security settings",
+      "Appearance settings",
     ],
     type: "system",
   },
   {
     id: 2,
-    name: "Operator",
-    scope: "Operational access",
-    permissions: ["Dashboard", "Areas", "Bins", "Telemetry", "Alerts"],
+    name: ROLES.ADMIN,
+    scope: "Administrative and operational control",
+    permissions: [
+      "View dashboard",
+      "Manage areas",
+      "Manage bins",
+      "View telemetry",
+      "View alerts",
+      "View analytics",
+      "View users",
+      "View roles",
+      "Security settings",
+      "Appearance settings",
+    ],
     type: "system",
   },
   {
     id: 3,
-    name: "Viewer",
-    scope: "Read-only access",
-    permissions: ["Dashboard", "Analytics", "Alerts"],
+    name: ROLES.WORKER,
+    scope: "Operational access",
+    permissions: [
+      "View dashboard",
+      "View areas",
+      "View bins",
+      "View telemetry",
+      "View alerts",
+      "View analytics",
+      "View own profile",
+      "View notifications",
+    ],
     type: "system",
-  },
-  {
-    id: 4,
-    name: "Supervisor",
-    scope: "Review and management",
-    permissions: ["Dashboard", "Areas", "Bins", "Alerts", "Analytics"],
-    type: "custom",
   },
 ];
 
 const filters = [
   { label: "All", value: "all" },
   { label: "System", value: "system" },
-  { label: "Custom", value: "custom" },
 ];
+
+function getRoleBadgeClass(role) {
+  switch (role) {
+    case ROLES.SUPERADMIN:
+      return "bg-rose-100 text-rose-700";
+    case ROLES.ADMIN:
+      return "bg-sky-100 text-sky-700";
+    default:
+      return "bg-emerald-100 text-emerald-700";
+  }
+}
 
 function RolesPage() {
   const [filter, setFilter] = useState("all");
@@ -92,7 +118,7 @@ function RolesPage() {
         ))}
       </div>
 
-      <SectionCard title="Roles" description="Review and compare available access roles.">
+      <SectionCard title="Roles" description="Review available access roles for the system.">
         <div className="space-y-4">
           <FilterChips options={filters} value={filter} onChange={setFilter} />
 
@@ -103,34 +129,38 @@ function RolesPage() {
               description="No roles match the selected filter."
             />
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
               {filteredRoles.map((role) => (
                 <div key={role.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="text-lg font-semibold text-slate-900">{role.name}</h3>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                          role.name,
+                        )}`}
+                      >
+                        {ROLE_LABELS[role.name] || role.name}
+                      </span>
+
+                      <h3 className="mt-3 text-lg font-semibold text-slate-900">
+                        {ROLE_LABELS[role.name] || role.name}
+                      </h3>
                       <p className="mt-1 text-sm text-slate-500">{role.scope}</p>
                     </div>
 
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        role.type === "system"
-                          ? "bg-sky-100 text-sky-700"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
+                    <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">
                       {role.type}
                     </span>
                   </div>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="mt-5 space-y-2">
                     {role.permissions.map((permission) => (
-                      <span
+                      <div
                         key={permission}
-                        className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700"
+                        className="rounded-xl bg-white px-3 py-2 text-xs font-medium text-slate-700"
                       >
                         {permission}
-                      </span>
+                      </div>
                     ))}
                   </div>
 

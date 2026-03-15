@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router";
 import { Plus, UserCog, Users } from "lucide-react";
 import PageHeader from "@/components/ui/page-header";
 import SectionCard from "@/components/ui/card/section-card";
@@ -8,6 +7,7 @@ import TableToolbar from "@/components/ui/table/table-toolbar";
 import FilterChips from "@/components/ui/filter-chips";
 import PaginationFooter from "@/components/ui/pagination-footer";
 import EmptyState from "@/components/ui/empty-state";
+import { ROLE_LABELS, ROLES } from "@/constants/roles";
 
 const userStats = [
   {
@@ -19,8 +19,8 @@ const userStats = [
   },
   {
     title: "Admins",
-    value: "3",
-    description: "Full system access",
+    value: "4",
+    description: "Super admins and admins",
     icon: UserCog,
     iconClassName: "bg-sky-100 text-sky-700",
   },
@@ -31,21 +31,28 @@ const users = [
     id: 1,
     name: "Mihashi",
     email: "mihashi@example.com",
-    role: "Admin",
+    role: ROLES.SUPERADMIN,
     status: "Active",
   },
   {
     id: 2,
     name: "Pasindu",
     email: "pasindu@example.com",
-    role: "Operator",
+    role: ROLES.ADMIN,
     status: "Active",
   },
   {
     id: 3,
     name: "Kavindu",
     email: "kavindu@example.com",
-    role: "Viewer",
+    role: ROLES.WORKER,
+    status: "Active",
+  },
+  {
+    id: 4,
+    name: "Nethmi",
+    email: "nethmi@example.com",
+    role: ROLES.WORKER,
     status: "Inactive",
   },
 ];
@@ -56,15 +63,28 @@ const filters = [
   { label: "Inactive", value: "inactive" },
 ];
 
+function getRoleBadgeClass(role) {
+  switch (role) {
+    case ROLES.SUPERADMIN:
+      return "bg-rose-100 text-rose-700";
+    case ROLES.ADMIN:
+      return "bg-sky-100 text-sky-700";
+    default:
+      return "bg-emerald-100 text-emerald-700";
+  }
+}
+
 function UsersPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
   const filteredUsers = users.filter((user) => {
+    const roleLabel = ROLE_LABELS[user.role] || user.role;
+
     const matchesSearch =
       user.name.toLowerCase().includes(search.toLowerCase()) ||
       user.email.toLowerCase().includes(search.toLowerCase()) ||
-      user.role.toLowerCase().includes(search.toLowerCase());
+      roleLabel.toLowerCase().includes(search.toLowerCase());
 
     const matchesFilter = filter === "all" || user.status.toLowerCase() === filter;
 
@@ -133,7 +153,15 @@ function UsersPage() {
                         {user.name}
                       </td>
                       <td className="px-4 py-4 text-sm text-slate-600">{user.email}</td>
-                      <td className="px-4 py-4 text-sm text-slate-700">{user.role}</td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${getRoleBadgeClass(
+                            user.role,
+                          )}`}
+                        >
+                          {ROLE_LABELS[user.role] || user.role}
+                        </span>
+                      </td>
                       <td className="px-4 py-4">
                         <span
                           className={`rounded-full px-3 py-1 text-xs font-semibold ${

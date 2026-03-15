@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router";
+import PublicRoute from "@/components/auth/public-route";
+import ProtectedRoute from "@/components/auth/protected-route";
 import AppLayout from "@/components/layout/app-layout";
 import DashboardPage from "@/features/dashboard/pages/dashboard-page";
 import AreasPage from "@/features/areas/pages/areas-page";
@@ -25,34 +27,38 @@ import ForgotPasswordPage from "@/features/auth/pages/forgot-password-page";
 function AppRouter() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route element={<PublicRoute />}>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      </Route>
 
-      <Route path="/" element={<AppLayout />}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<DashboardPage />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<AppLayout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<DashboardPage />} />
 
-        <Route path="areas" element={<AreasPage />} />
-        <Route path="areas/new" element={<CreateAreaPage />} />
-        <Route path="areas/:areaId" element={<AreaDetailsPage />} />
-        <Route path="areas/:areaId/edit" element={<EditAreaPage />} />
+          <Route path="areas" element={<AreasPage />} />
+          <Route path="areas/new" element={<CreateAreaPage />} />
+          <Route path="areas/:areaId" element={<AreaDetailsPage />} />
+          <Route path="areas/:areaId/edit" element={<EditAreaPage />} />
 
-        <Route path="bins" element={<BinsPage />} />
-        <Route path="bins/new" element={<CreateBinPage />} />
-        <Route path="bins/:binId" element={<BinDetailsPage />} />
-        <Route path="bins/:binId/edit" element={<EditBinPage />} />
+          <Route path="bins" element={<BinsPage />} />
+          <Route path="bins/new" element={<CreateBinPage />} />
+          <Route path="bins/:binId" element={<BinDetailsPage />} />
+          <Route path="bins/:binId/edit" element={<EditBinPage />} />
 
-        <Route path="telemetry" element={<TelemetryPage />} />
-        <Route path="alerts" element={<AlertsPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="telemetry" element={<TelemetryPage />} />
+          <Route path="alerts" element={<AlertsPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
 
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="settings/profile" element={<ProfilePage />} />
-        <Route path="settings/notifications" element={<NotificationsPage />} />
-        <Route path="settings/users" element={<UsersPage />} />
-        <Route path="settings/roles" element={<RolesPage />} />
-        <Route path="settings/security" element={<SecurityPage />} />
-        <Route path="settings/appearance" element={<AppearancePage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/profile" element={<ProfilePage />} />
+          <Route path="settings/notifications" element={<NotificationsPage />} />
+          <Route path="settings/users" element={<UsersPage />} />
+          <Route path="settings/roles" element={<RolesPage />} />
+          <Route path="settings/security" element={<SecurityPage />} />
+          <Route path="settings/appearance" element={<AppearancePage />} />
+        </Route>
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
