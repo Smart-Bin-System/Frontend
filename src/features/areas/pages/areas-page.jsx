@@ -137,18 +137,18 @@ function AreasPage() {
                 </div>
 
                 <div className="mt-5 flex items-center gap-2">
-                  <button
-                    type="button"
+                  <Link
+                    to={`/areas/${area._id || area.name}`}
                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
                     View
-                  </button>
-                  <button
-                    type="button"
+                  </Link>
+                  <Link
+                    to={`/areas/${area._id || area.name}/edit`}
                     className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
                     Edit
-                  </button>
+                  </Link>
                 </div>
               </div>
             );

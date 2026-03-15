@@ -1,9 +1,11 @@
-import { useMemo } from "react";
-import { useParams } from "react-router";
+import { useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Cpu, MapPinned, RefreshCw, Trash2, Waypoints } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
+import ConfirmModal from "@/components/ui/modal/confirm-modal";
+import Toast from "@/components/ui/toast";
 
 const fallbackBin = {
   _id: "1",
@@ -43,6 +45,9 @@ function getBarClass(fillLevel) {
 
 function BinDetailsPage() {
   const { binId } = useParams();
+  const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["bin", binId],
@@ -54,6 +59,14 @@ function BinDetailsPage() {
 
   return (
     <div className="space-y-6">
+      {showToast ? (
+        <Toast
+          variant="warning"
+          title="UI-only delete flow"
+          description="Delete action is prepared in the interface and will be wired later."
+        />
+      ) : null}
+
       <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-sm font-medium text-emerald-600">{bin.publicId}</p>
@@ -231,12 +244,14 @@ function BinDetailsPage() {
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
+                    onClick={() => navigate(`/bins/${binId}/edit`)}
                     className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
                     Edit Bin
                   </button>
                   <button
                     type="button"
+                    onClick={() => setDeleteOpen(true)}
                     className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
                   >
                     Remove Bin
@@ -247,6 +262,19 @@ function BinDetailsPage() {
           </div>
         </>
       )}
+
+      <ConfirmModal
+        open={deleteOpen}
+        title="Delete bin"
+        description={`Are you sure you want to delete ${bin.name}? This action is currently UI-only and will be wired later.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => {
+          setDeleteOpen(false);
+          setShowToast(true);
+        }}
+      />
     </div>
   );
 }
