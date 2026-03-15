@@ -1,8 +1,10 @@
 import axios from "axios";
-import { getStoredToken, clearAuthStorage } from "@/services/storage/token-storage";
+import { getStoredToken } from "@/services/storage/token-storage";
+
+export const AUTH_EXPIRED_EVENT = "auth:expired";
 
 const axiosClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -26,7 +28,7 @@ axiosClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      clearAuthStorage();
+      window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT));
     }
 
     return Promise.reject(error);

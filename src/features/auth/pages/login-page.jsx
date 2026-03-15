@@ -1,54 +1,53 @@
 import { Link, useLocation, useNavigate } from "react-router";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import AuthShell from "@/components/auth/auth-shell";
 import FormInput from "@/components/ui/input/form-input";
 import Toast from "@/components/ui/toast";
 import { useAuth } from "@/context/auth-context";
 import { loginUser } from "@/features/auth/api/login";
+import { loginSchema } from "@/features/auth/schemas/login-schema";
 
 function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
-
   const [showPassword, setShowPassword] = useState(false);
-  const [values, setValues] = useState({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [serverError, setServerError] = useState("");
 
   const redirectTo = location.state?.from?.pathname || "/dashboard";
 
-  const fakeRegister = (name) => ({
-    name,
-    value: values[name],
-    onChange: (event) =>
-      setValues((prev) => ({
-        ...prev,
-        [name]: event.target.value,
-      })),
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
+  const onSubmit = async (values) => {
+    setServerError("");
 
     try {
       const response = await loginUser(values);
 
-      const resolvedToken = response?.token || response?.data?.token || "demo-token";
+      const resolvedToken = response?.token || response?.data?.token || null;
 
-      const resolvedUser = response?.user ||
-        response?.data?.user || {
-          id: "1",
-          name: "Mihashi",
-          email: values.email,
-          role: "admin",
-        };
+      const resolvedUser = response?.user || response?.data?.user || null;
+
+      if (!resolvedToken || !resolvedUser) {
+        throw new Error("Invalid login response");
+      }
+
+      if (!resolvedUser.isActive) {
+        throw new Error("Your account is inactive. Please contact an administrator.");
+      }
 
       login({
         token: resolvedToken,
@@ -56,10 +55,13 @@ function LoginPage() {
       });
 
       navigate(redirectTo, { replace: true });
-    } catch {
-      setError("Login failed. Please check your credentials and try again.");
-    } finally {
-      setIsSubmitting(false);
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Login failed. Please check your credentials and try again.";
+
+      setServerError(message);
     }
   };
 
@@ -79,15 +81,19 @@ function LoginPage() {
         </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {error ? <Toast variant="error" title="Authentication failed" description={error} /> : null}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        {serverError ? (
+          <Toast variant="error" title="Authentication failed" description={serverError} />
+        ) : null}
 
         <FormInput
           label="Email"
           name="email"
           type="email"
           placeholder="admin@example.com"
-          register={fakeRegister}
+          register={register}
+          error={errors.email?.message}
+          disabled={isSubmitting}
         />
 
         <div className="space-y-2">
@@ -95,20 +101,18 @@ function LoginPage() {
             Password
           </label>
 
-          <div className="flex items-center rounded-xl border border-slate-200 bg-white px-4 py-3">
+          <div
+            className={`flex items-center rounded-xl border bg-white px-4 py-3 ${
+              errors.password ? "border-rose-300 bg-rose-50" : "border-slate-200"
+            }`}
+          >
             <input
               id="password"
-              name="password"
               type={showPassword ? "text" : "password"}
-              value={values.password}
-              onChange={(event) =>
-                setValues((prev) => ({
-                  ...prev,
-                  password: event.target.value,
-                }))
-              }
               placeholder="Enter your password"
-              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              disabled={isSubmitting}
+              {...register("password")}
+              className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 disabled:cursor-not-allowed"
             />
 
             <button
@@ -119,6 +123,10 @@ function LoginPage() {
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
+
+          {errors.password ? (
+            <p className="text-xs text-rose-600">{errors.password.message}</p>
+          ) : null}
         </div>
 
         <div className="flex items-center justify-between gap-3">

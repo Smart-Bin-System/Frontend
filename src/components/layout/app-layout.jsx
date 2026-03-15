@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/sidebar";
 import HeaderNotificationsDropdown from "@/components/layout/header-notifications-dropdown";
 import HeaderProfileDropdown from "@/components/layout/header-profile-dropdown";
+import { useAuth } from "@/context/auth-context";
+import { ROLE_LABELS } from "@/constants/roles";
 import { Bell, Menu, Search } from "lucide-react";
 
 const pageTitles = {
@@ -21,13 +23,27 @@ const pageTitles = {
   "/settings/appearance": "Appearance",
 };
 
+function getInitials(name = "User") {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
+}
+
 function AppLayout() {
   const location = useLocation();
+  const { user } = useAuth();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const pageTitle = pageTitles[location.pathname] || "Smart Waste Management";
+  const displayName = user?.name || "User";
+  const displayRole = ROLE_LABELS[user?.role] || "User";
+  const initials = getInitials(displayName);
 
   useEffect(() => {
     setNotificationsOpen(false);
@@ -95,11 +111,11 @@ function AppLayout() {
                     className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 transition hover:bg-slate-50"
                   >
                     <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-700">
-                      M
+                      {initials || "U"}
                     </div>
                     <div className="hidden text-left sm:block">
-                      <p className="text-sm font-medium text-slate-900">Mihashi</p>
-                      <p className="text-xs text-slate-500">System Admin</p>
+                      <p className="text-sm font-medium text-slate-900">{displayName}</p>
+                      <p className="text-xs text-slate-500">{displayRole}</p>
                     </div>
                   </button>
 

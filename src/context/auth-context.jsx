@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { getMe } from "@/features/auth/api/get-me";
+import { AUTH_EXPIRED_EVENT } from "@/lib/axios";
+import { getPermissionsForRole, normalizeRole } from "@/lib/rbac";
 import {
   clearAuthStorage,
   getStoredToken,
@@ -10,26 +12,45 @@ import {
 
 const AuthContext = createContext(null);
 
+function normalizeUser(user) {
+  if (!user) return null;
+
+  const normalizedRole = normalizeRole(user.role);
+
+  return {
+    ...user,
+    role: normalizedRole,
+    permissions: user.permissions?.length
+      ? user.permissions
+      : getPermissionsForRole(normalizedRole),
+  };
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => getStoredToken());
-  const [user, setUser] = useState(() => getStoredUser());
-  const [isBootstrapping, setIsBootstrapping] = useState(Boolean(getStoredToken()));
+  const [user, setUser] = useState(() => normalizeUser(getStoredUser()));
+  const [isBootstrapping, setIsBootstrapping] = useState(true);
 
   useEffect(() => {
     async function bootstrapAuth() {
-      if (!token) {
+      const existingToken = getStoredToken();
+
+      if (!existingToken) {
         setIsBootstrapping(false);
         return;
       }
 
       try {
         const response = await getMe();
-        const resolvedUser = response?.data || response?.user || response || null;
+        const resolvedUser = normalizeUser(response?.user || response || null);
 
-        if (resolvedUser) {
-          setUser(resolvedUser);
-          setStoredUser(resolvedUser);
+        if (!resolvedUser) {
+          throw new Error("No user returned from /auth/me");
         }
+
+        setToken(existingToken);
+        setUser(resolvedUser);
+        setStoredUser(resolvedUser);
       } catch {
         clearAuthStorage();
         setToken(null);
@@ -40,29 +61,46 @@ export function AuthProvider({ children }) {
     }
 
     bootstrapAuth();
-  }, [token]);
+  }, []);
+
+  useEffect(() => {
+    function handleAuthExpired() {
+      clearAuthStorage();
+      setToken(null);
+      setUser(null);
+    }
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    };
+  }, []);
 
   const value = useMemo(
     () => ({
       token,
       user,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(token && user),
       isBootstrapping,
       login: ({ token: nextToken, user: nextUser }) => {
-        setToken(nextToken);
-        setUser(nextUser || null);
-        setStoredToken(nextToken);
+        const normalizedUser = normalizeUser(nextUser);
 
-        if (nextUser) {
-          setStoredUser(nextUser);
-        }
+        setToken(nextToken);
+        setUser(normalizedUser);
+        setStoredToken(nextToken);
+        setStoredUser(normalizedUser);
       },
       logout: () => {
         clearAuthStorage();
         setToken(null);
         setUser(null);
       },
-      setUser,
+      setUser: (nextUser) => {
+        const normalizedUser = normalizeUser(nextUser);
+        setUser(normalizedUser);
+        setStoredUser(normalizedUser);
+      },
     }),
     [token, user, isBootstrapping],
   );
