@@ -1,20 +1,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router";
-import axiosClient from "@/lib/axios";
 import FormInput from "@/components/ui/input/form-input";
-import FormTextarea from "@/components/ui/input/form-textarea";
+import FormSelect from "@/components/ui/input/form-select";
+import PageHeader from "@/components/ui/page-header";
+import Toast from "@/components/ui/toast";
+import { createArea } from "@/features/areas/api/create-area";
+import { getAreaList } from "@/features/areas/api/get-area-list";
 import { createAreaSchema } from "@/features/areas/schemas/create-area-schema";
-
-const createArea = async (payload) => {
-  const response = await axiosClient.post("/areas", payload);
-  return response.data;
-};
 
 function CreateAreaPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  const areasQuery = useQuery({
+    queryKey: ["areas"],
+    queryFn: getAreaList,
+  });
 
   const {
     register,
@@ -24,8 +27,8 @@ function CreateAreaPage() {
     resolver: zodResolver(createAreaSchema),
     defaultValues: {
       name: "",
-      description: "",
-      address: "",
+      code: "",
+      parentAreaId: "",
     },
   });
 
@@ -37,18 +40,40 @@ function CreateAreaPage() {
     },
   });
 
+  const areas = areasQuery.data?.data || [];
+  const areaOptions = areas.map((area) => ({
+    value: area.id,
+    label: area.name,
+  }));
+
   const onSubmit = (values) => {
-    mutation.mutate(values);
+    mutation.mutate({
+      name: values.name,
+      code: values.code,
+      parentAreaId: values.parentAreaId || null,
+    });
   };
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="text-2xl font-semibold text-slate-900">Create Area</h2>
-        <p className="mt-2 text-sm text-slate-500">
-          Add a new operational area for Mihashi&apos;s Smart Waste Management System.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Area Management"
+        title="Create Area"
+        description="Add a new operational area to the system."
+        breadcrumbs={[{ label: "Areas", to: "/areas" }, { label: "Create" }]}
+      />
+
+      {mutation.isError ? (
+        <Toast
+          variant="error"
+          title="Failed to create area"
+          description={
+            mutation.error?.response?.data?.message ||
+            mutation.error?.message ||
+            "Please try again."
+          }
+        />
+      ) : null}
 
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -64,30 +89,25 @@ function CreateAreaPage() {
             disabled={mutation.isPending}
           />
 
-          <FormTextarea
-            label="Description"
-            name="description"
-            placeholder="Describe the purpose of this area"
+          <FormInput
+            label="Area Code"
+            name="code"
+            placeholder="e.g. MLB"
             register={register}
-            error={errors.description?.message}
+            error={errors.code?.message}
             disabled={mutation.isPending}
           />
 
-          <FormInput
-            label="Address"
-            name="address"
-            placeholder="Optional address or location description"
+          <FormSelect
+            label="Parent Area"
+            name="parentAreaId"
             register={register}
-            error={errors.address?.message}
-            disabled={mutation.isPending}
+            error={errors.parentAreaId?.message}
+            options={areaOptions}
+            placeholder="No parent area"
+            disabled={mutation.isPending || areasQuery.isLoading}
           />
         </div>
-
-        {mutation.isError ? (
-          <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            Failed to create area. Please check the backend request and try again.
-          </div>
-        ) : null}
 
         <div className="mt-6 flex items-center gap-3">
           <button
