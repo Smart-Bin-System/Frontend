@@ -1,7 +1,7 @@
-import { optionalString, requiredString, z } from "@/lib/validators";
+import { z } from "zod";
 
 export const createAreaSchema = z.object({
-  name: requiredString("Area name"),
-  description: optionalString(),
-  address: optionalString(),
+  name: z.string().trim().min(1, "Area name is required"),
+  code: z.string().trim().min(1, "Area code is required"),
+  parentAreaId: z.string().nullable().optional(),
 });

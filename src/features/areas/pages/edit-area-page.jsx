@@ -3,28 +3,14 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axiosClient from "@/lib/axios";
 import FormInput from "@/components/ui/input/form-input";
-import FormTextarea from "@/components/ui/input/form-textarea";
+import FormSelect from "@/components/ui/input/form-select";
 import PageHeader from "@/components/ui/page-header";
+import Toast from "@/components/ui/toast";
+import { getAreaById } from "@/features/areas/api/get-area-by-id";
+import { getAreaList } from "@/features/areas/api/get-area-list";
+import { updateArea } from "@/features/areas/api/update-area";
 import { createAreaSchema } from "@/features/areas/schemas/create-area-schema";
-
-const fallbackArea = {
-  _id: "1",
-  name: "Malabe Campus",
-  description: "Main campus smart waste collection area",
-  address: "Malabe main academic zone",
-};
-
-const getAreaById = async (areaId) => {
-  const response = await axiosClient.get(`/areas/${areaId}`);
-  return response.data;
-};
-
-const updateArea = async ({ areaId, payload }) => {
-  const response = await axiosClient.put(`/areas/${areaId}`, payload);
-  return response.data;
-};
 
 function EditAreaPage() {
   const { areaId } = useParams();
@@ -37,10 +23,12 @@ function EditAreaPage() {
     enabled: Boolean(areaId),
   });
 
-  const area = useMemo(
-    () => areaQuery.data?.data || areaQuery.data || fallbackArea,
-    [areaQuery.data],
-  );
+  const areasQuery = useQuery({
+    queryKey: ["areas"],
+    queryFn: getAreaList,
+  });
+
+  const area = useMemo(() => areaQuery.data?.data || null, [areaQuery.data]);
 
   const {
     register,
@@ -50,14 +38,14 @@ function EditAreaPage() {
   } = useForm({
     resolver: zodResolver(createAreaSchema),
     values: {
-      name: area.name || "",
-      description: area.description || "",
-      address: area.address || "",
+      name: area?.name || "",
+      code: area?.code || "",
+      parentAreaId: area?.parentAreaId || "",
     },
   });
 
   const mutation = useMutation({
-    mutationFn: updateArea,
+    mutationFn: ({ id, payload }) => updateArea(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["areas"] });
       queryClient.invalidateQueries({ queryKey: ["area", areaId] });
@@ -65,8 +53,23 @@ function EditAreaPage() {
     },
   });
 
+  const allAreas = areasQuery.data?.data || [];
+  const areaOptions = allAreas
+    .filter((item) => item.id !== areaId)
+    .map((item) => ({
+      value: item.id,
+      label: item.name,
+    }));
+
   const onSubmit = (values) => {
-    mutation.mutate({ areaId, payload: values });
+    mutation.mutate({
+      id: areaId,
+      payload: {
+        name: values.name,
+        code: values.code,
+        parentAreaId: values.parentAreaId || null,
+      },
+    });
   };
 
   if (areaQuery.isLoading) {
@@ -85,15 +88,21 @@ function EditAreaPage() {
         description="Update operational area information."
         breadcrumbs={[
           { label: "Areas", to: "/areas" },
-          { label: area.name || "Area", to: `/areas/${areaId}` },
+          { label: area?.name || "Area", to: `/areas/${areaId}` },
           { label: "Edit" },
         ]}
       />
 
-      {areaQuery.isError ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          Failed to load this area from the API. Showing fallback sample data.
-        </div>
+      {mutation.isError ? (
+        <Toast
+          variant="error"
+          title="Failed to update area"
+          description={
+            mutation.error?.response?.data?.message ||
+            mutation.error?.message ||
+            "Please try again."
+          }
+        />
       ) : null}
 
       <form
@@ -110,30 +119,25 @@ function EditAreaPage() {
             disabled={mutation.isPending}
           />
 
-          <FormTextarea
-            label="Description"
-            name="description"
-            placeholder="Describe the purpose of this area"
+          <FormInput
+            label="Area Code"
+            name="code"
+            placeholder="e.g. MLB"
             register={register}
-            error={errors.description?.message}
+            error={errors.code?.message}
             disabled={mutation.isPending}
           />
 
-          <FormInput
-            label="Address"
-            name="address"
-            placeholder="Optional address or location description"
+          <FormSelect
+            label="Parent Area"
+            name="parentAreaId"
             register={register}
-            error={errors.address?.message}
-            disabled={mutation.isPending}
+            error={errors.parentAreaId?.message}
+            options={areaOptions}
+            placeholder="No parent area"
+            disabled={mutation.isPending || areasQuery.isLoading}
           />
         </div>
-
-        {mutation.isError ? (
-          <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            Failed to update area. Please try again.
-          </div>
-        ) : null}
 
         <div className="mt-6 flex items-center gap-3">
           <button
