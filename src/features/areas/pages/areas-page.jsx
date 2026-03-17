@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { GitBranch, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import TableToolbar from "@/components/ui/table-toolbar";
+import TableToolbar from "@/components/ui/table/table-toolbar";
 import ActionMenu from "@/components/ui/action-menu";
 import EmptyState from "@/components/ui/empty-state";
 import PageSkeleton from "@/components/ui/page-skeleton";
