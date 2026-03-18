@@ -46,7 +46,7 @@ function Sidebar({ mobileOpen = false, onClose }) {
               className="h-12 w-12 rounded-2xl object-contain"
             />
             <div>
-              <h2 className="text-base font-semibold">Mihashi Smart Bin</h2>
+              <h2 className="text-base font-semibold">Mihashi's Smart Bin</h2>
               <p className="text-xs text-slate-400">Waste Management Console</p>
             </div>
           </div>
