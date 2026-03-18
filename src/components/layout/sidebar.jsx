@@ -2,7 +2,6 @@ import { NavLink } from "react-router";
 import {
   BarChart3,
   BellRing,
-  Boxes,
   Gauge,
   LayoutDashboard,
   Map,
@@ -34,16 +33,18 @@ function Sidebar({ mobileOpen = false, onClose }) {
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-40 w-72 overflow-y-auto border-r border-slate-800 bg-slate-950 text-slate-100 transition-transform duration-300",
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col overflow-y-auto border-r border-slate-800 bg-slate-950 text-slate-100 transition-transform duration-300",
           mobileOpen ? "translate-x-0" : "-translate-x-full",
           "lg:translate-x-0",
         ].join(" ")}
       >
         <div className="flex items-center justify-between border-b border-slate-800 px-6 py-6 lg:block">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
-              <Boxes className="h-6 w-6" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Mihashi Smart Bin logo"
+              className="h-12 w-12 rounded-2xl object-contain"
+            />
             <div>
               <h2 className="text-base font-semibold">Mihashi Smart Bin</h2>
               <p className="text-xs text-slate-400">Waste Management Console</p>
@@ -59,7 +60,7 @@ function Sidebar({ mobileOpen = false, onClose }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2 px-4 py-5">
+        <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
           {navItems.map((item) => {
             const Icon = item.icon;
 
@@ -84,7 +85,7 @@ function Sidebar({ mobileOpen = false, onClose }) {
           })}
         </nav>
 
-        <div className="border-t border-slate-800 p-4">
+        <div className="mt-auto border-t border-slate-800 p-4">
           <div className="rounded-2xl bg-slate-900 p-4">
             <p className="text-xs uppercase tracking-wider text-slate-400">System Status</p>
             <p className="mt-2 text-sm font-semibold text-white">Monitoring active smart bins</p>

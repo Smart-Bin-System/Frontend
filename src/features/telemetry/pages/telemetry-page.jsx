@@ -7,7 +7,7 @@ const fallbackTelemetry = [
   {
     _id: "1",
     publicId: "BIN-9F2A1C",
-    area: "Malabe Campus",
+    area: "BCI Campus",
     status: "online",
     lastSeen: "10 sec ago",
     temperature: "31°C",
@@ -37,7 +37,7 @@ const fallbackTelemetry = [
 ];
 
 const getTelemetry = async () => {
-  const response = await axiosClient.get("/telemetry");
+  const response = await axiosClient.get("/telemetry/get");
   return response.data;
 };
 

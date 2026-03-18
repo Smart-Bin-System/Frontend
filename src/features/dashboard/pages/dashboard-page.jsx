@@ -39,7 +39,7 @@ const recentAlerts = [
   {
     id: 1,
     bin: "BIN-9F2A1C",
-    area: "Malabe Campus",
+    area: "BCI Campus",
     type: "Bin Full",
     severity: "High",
     time: "5 min ago",
@@ -64,7 +64,7 @@ const recentAlerts = [
 
 const areaStatus = [
   {
-    area: "Malabe Campus",
+    area: "BCI Campus",
     bins: 8,
     active: 7,
     issues: 1,

@@ -1,7 +1,9 @@
-import { Link, useParams } from "react-router";
-import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { GitBranch, Pencil, Plus, Trash2 } from "lucide-react";
+import { MapContainer, Polygon, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import PageHeader from "@/components/ui/page-header";
 import SectionCard from "@/components/ui/card/section-card";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
@@ -9,8 +11,63 @@ import Toast from "@/components/ui/toast";
 import { getAreaById } from "@/features/areas/api/get-area-by-id";
 import { deleteArea } from "@/features/areas/api/delete-area";
 
+function getMapPoints(geoFence) {
+  if (
+    !geoFence ||
+    geoFence.type !== "Polygon" ||
+    !Array.isArray(geoFence.coordinates) ||
+    !Array.isArray(geoFence.coordinates[0])
+  ) {
+    return [];
+  }
+
+  return geoFence.coordinates[0].map(([lng, lat]) => [lat, lng]);
+}
+
+function getAreaTypeLabel(area) {
+  if (area?.level === 1) return "Province";
+  if (area?.level === 2) return "District";
+  if (area?.level === 3) return "City";
+  return "Linked Administrative Area";
+}
+
+function getParentAreaName(parentAreaId) {
+  if (!parentAreaId) return "No parent area";
+  if (typeof parentAreaId === "object" && parentAreaId?.name) {
+    return parentAreaId.name;
+  }
+  return "Parent linked";
+}
+
+function FitPolygonBounds({ points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points?.length) return;
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }, [map, points]);
+
+  return null;
+}
+
+function createMaskPolygon(points) {
+  if (!points?.length) return [];
+
+  const worldRing = [
+    [90, -180],
+    [90, 180],
+    [-90, 180],
+    [-90, -180],
+    [90, -180],
+  ];
+
+  return [worldRing, points];
+}
+
 function AreaDetailsPage() {
   const { areaId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -26,7 +83,7 @@ function AreaDetailsPage() {
     mutationFn: () => deleteArea(areaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["areas"] });
-      window.location.href = "/areas";
+      navigate("/areas");
     },
   });
 
@@ -47,6 +104,9 @@ function AreaDetailsPage() {
       />
     );
   }
+
+  const polygonPoints = getMapPoints(area.geoFence);
+  const maskPolygon = createMaskPolygon(polygonPoints);
 
   return (
     <div className="space-y-6">
@@ -88,58 +148,104 @@ function AreaDetailsPage() {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="Area Information">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Name</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">{area.name}</p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-4">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Code</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">{area.code}</p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
-              <div className="flex items-center gap-2 text-slate-500">
-                <GitBranch className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider">Parent Area</span>
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.25fr]">
+        <div className="space-y-6">
+          <SectionCard title="Area Information">
+            <div className="grid gap-4">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Name</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{area.name}</p>
               </div>
-              <p className="mt-2 text-sm font-medium text-slate-900">
-                {area.parentAreaId || "No parent area"}
-              </p>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Code</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{area.code}</p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Area Type</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{getAreaTypeLabel(area)}</p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-500">
+                  <GitBranch className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-wider">Parent Area</span>
+                </div>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {getParentAreaName(area.parentAreaId)}
+                </p>
+              </div>
             </div>
+          </SectionCard>
 
-            <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Geo Fence</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">
-                {area.geoFence ? "Configured" : "Not configured"}
-              </p>
+          <SectionCard title="Area Actions">
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to={`/areas/${areaId}/edit`}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Edit Area
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Area
+                </span>
+              </button>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </div>
 
-        <SectionCard title="Area Actions">
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to={`/areas/${areaId}/edit`}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Edit Area
-            </Link>
+        <SectionCard
+          title="Selected Geofence Preview"
+          description="Only the selected area boundary is highlighted and focused"
+        >
+          {polygonPoints.length >= 3 ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
+              <MapContainer
+                center={polygonPoints[0]}
+                zoom={13}
+                scrollWheelZoom
+                className="h-105 w-full"
+              >
+                <FitPolygonBounds points={polygonPoints} />
 
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Trash2 className="h-4 w-4" />
-                Delete Area
-              </span>
-            </button>
-          </div>
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <Polygon
+                  positions={maskPolygon}
+                  pathOptions={{
+                    fillColor: "#020618",
+                    fillOpacity: 0.45,
+                    stroke: false,
+                  }}
+                />
+
+                <Polygon
+                  positions={polygonPoints}
+                  pathOptions={{
+                    color: "#00bc7d",
+                    weight: 3,
+                    fillColor: "#00bc7d",
+                    fillOpacity: 0.2,
+                  }}
+                />
+              </MapContainer>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
+              No boundary preview available for this area.
+            </div>
+          )}
         </SectionCard>
       </div>
 

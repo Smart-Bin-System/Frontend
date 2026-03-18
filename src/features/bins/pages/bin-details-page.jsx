@@ -13,7 +13,7 @@ const fallbackBin = {
   name: "Main Entrance Bin",
   description: "Smart waste bin near the main entrance",
   status: "online",
-  areaName: "Malabe Campus",
+  areaName: "BCI Campus",
   fillLevel: 74,
   lastSeen: "2 min ago",
   device: {
@@ -22,7 +22,7 @@ const fallbackBin = {
     cnnModelVersion: "cnn-v2",
   },
   location: {
-    address: "Main Entrance, Malabe Campus",
+    address: "Main Entrance, BCI Campus",
   },
   compartments: [
     { type: "PET", fillLevel: 82, status: "warning" },
