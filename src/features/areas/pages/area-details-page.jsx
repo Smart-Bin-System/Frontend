@@ -1,13 +1,27 @@
 import { Link, useParams } from "react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GitBranch, Pencil, Plus, Trash2 } from "lucide-react";
+import { GitBranch, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
+import { MapContainer, Polygon, TileLayer } from "react-leaflet";
 import PageHeader from "@/components/ui/page-header";
 import SectionCard from "@/components/ui/card/section-card";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
 import Toast from "@/components/ui/toast";
 import { getAreaById } from "@/features/areas/api/get-area-by-id";
 import { deleteArea } from "@/features/areas/api/delete-area";
+
+function getMapPoints(geoFence) {
+  if (
+    !geoFence ||
+    geoFence.type !== "Polygon" ||
+    !Array.isArray(geoFence.coordinates) ||
+    !Array.isArray(geoFence.coordinates[0])
+  ) {
+    return [];
+  }
+
+  return geoFence.coordinates[0].map(([lng, lat]) => [lat, lng]);
+}
 
 function AreaDetailsPage() {
   const { areaId } = useParams();
@@ -47,6 +61,8 @@ function AreaDetailsPage() {
       />
     );
   }
+
+  const polygonPoints = getMapPoints(area.geoFence);
 
   return (
     <div className="space-y-6">
@@ -88,58 +104,88 @@ function AreaDetailsPage() {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SectionCard title="Area Information">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-4">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Name</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">{area.name}</p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-4">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Code</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">{area.code}</p>
-            </div>
-
-            <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
-              <div className="flex items-center gap-2 text-slate-500">
-                <GitBranch className="h-4 w-4" />
-                <span className="text-xs uppercase tracking-wider">Parent Area</span>
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.25fr]">
+        <div className="space-y-6">
+          <SectionCard title="Area Information">
+            <div className="grid gap-4">
+              <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Name</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{area.name}</p>
               </div>
-              <p className="mt-2 text-sm font-medium text-slate-900">
-                {area.parentAreaId || "No parent area"}
-              </p>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Code</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{area.code}</p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-500">
+                  <GitBranch className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-wider">Parent Area</span>
+                </div>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {typeof area.parentAreaId === "object"
+                    ? area.parentAreaId?.name || "Parent Linked"
+                    : area.parentAreaId || "No parent area"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
+                <div className="flex items-center gap-2 text-slate-500">
+                  <MapPinned className="h-4 w-4" />
+                  <span className="text-xs uppercase tracking-wider">Geo Fence</span>
+                </div>
+                <p className="mt-2 text-sm font-medium text-slate-900">
+                  {area.geoFence ? "Configured" : "Not configured"}
+                </p>
+              </div>
             </div>
+          </SectionCard>
 
-            <div className="rounded-xl bg-slate-50 p-4 md:col-span-2">
-              <span className="text-xs uppercase tracking-wider text-slate-500">Geo Fence</span>
-              <p className="mt-2 text-sm font-medium text-slate-900">
-                {area.geoFence ? "Configured" : "Not configured"}
-              </p>
+          <SectionCard title="Area Actions">
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to={`/areas/${areaId}/edit`}
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+              >
+                Edit Area
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(true)}
+                className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  Delete Area
+                </span>
+              </button>
             </div>
-          </div>
-        </SectionCard>
+          </SectionCard>
+        </div>
 
-        <SectionCard title="Area Actions">
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to={`/areas/${areaId}/edit`}
-              className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Edit Area
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setDeleteOpen(true)}
-              className="rounded-xl border border-rose-200 px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50"
-            >
-              <span className="inline-flex items-center gap-2">
-                <Trash2 className="h-4 w-4" />
-                Delete Area
-              </span>
-            </button>
-          </div>
+        <SectionCard title="Geofence Preview" description="Spatial boundary of the selected area">
+          {polygonPoints.length >= 3 ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
+              <MapContainer
+                center={polygonPoints[0]}
+                zoom={13}
+                scrollWheelZoom
+                className="h-105 w-full"
+              >
+                <TileLayer
+                  attribution="&copy; OpenStreetMap contributors"
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <Polygon positions={polygonPoints} />
+              </MapContainer>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
+              No geofence configured for this area.
+            </div>
+          )}
         </SectionCard>
       </div>
 
