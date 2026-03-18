@@ -87,7 +87,7 @@ function CreateAreaPage() {
               <FormInput
                 label="Area Name"
                 name="name"
-                placeholder="e.g. Malabe Campus"
+                placeholder="e.g. BCI Campus"
                 register={register}
                 error={errors.name?.message}
                 disabled={mutation.isPending}

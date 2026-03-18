@@ -16,7 +16,7 @@ const fallbackBin = {
   description: "Smart waste bin near the main entrance",
   areaId: "1",
   location: {
-    address: "Main Entrance, Malabe Campus",
+    address: "Main Entrance, BCI Campus",
   },
   device: {
     esp32ChipId: "ESP32-7A91X",
@@ -26,7 +26,7 @@ const fallbackBin = {
 };
 
 const fallbackAreas = [
-  { _id: "1", name: "Malabe Campus" },
+  { _id: "1", name: "BCI Campus" },
   { _id: "2", name: "Library Zone" },
 ];
 

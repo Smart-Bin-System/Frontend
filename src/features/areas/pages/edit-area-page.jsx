@@ -13,6 +13,28 @@ import { getAreaList } from "@/features/areas/api/get-area-list";
 import { updateArea } from "@/features/areas/api/update-area";
 import { createAreaSchema } from "@/features/areas/schemas/create-area-schema";
 
+function getAreaIdValue(area) {
+  return area?._id || area?.id || "";
+}
+
+function getParentIdValue(parentAreaId) {
+  if (!parentAreaId) return "";
+  if (typeof parentAreaId === "object") return parentAreaId._id || "";
+  return parentAreaId || "";
+}
+
+function inferAreaLevel(area, allAreas) {
+  if (!area?.parentAreaId) return "1";
+
+  const parentId = getParentIdValue(area.parentAreaId);
+  const parent = allAreas.find((item) => getAreaIdValue(item) === parentId);
+
+  if (!parent) return "2";
+
+  const parentHasNoParent = !parent.parentAreaId;
+  return parentHasNoParent ? "2" : "3";
+}
+
 function EditAreaPage() {
   const { areaId } = useParams();
   const navigate = useNavigate();
@@ -31,29 +53,85 @@ function EditAreaPage() {
   });
 
   const area = useMemo(() => areaQuery.data?.data || null, [areaQuery.data]);
-
-  useEffect(() => {
-    if (area?.geoFence) {
-      setGeoFence(area.geoFence);
-    }
-  }, [area]);
+  const allAreas = useMemo(() => areasQuery.data?.data || [], [areasQuery.data]);
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(createAreaSchema),
-    values: {
-      name: area?.name || "",
-      code: area?.code || "",
-      parentAreaId:
-        typeof area?.parentAreaId === "object"
-          ? area?.parentAreaId?._id || ""
-          : area?.parentAreaId || "",
+    defaultValues: {
+      name: "",
+      code: "",
+      level: "1",
+      parentAreaId: "",
     },
   });
+
+  const selectedLevel = watch("level");
+
+  const rootAreas = useMemo(() => {
+    return allAreas.filter((item) => !item.parentAreaId && getAreaIdValue(item) !== areaId);
+  }, [allAreas, areaId]);
+
+  const level2Areas = useMemo(() => {
+    return allAreas.filter((item) => {
+      const itemId = getAreaIdValue(item);
+      if (itemId === areaId) return false;
+
+      const parentId = getParentIdValue(item.parentAreaId);
+      if (!parentId) return false;
+
+      const parent = allAreas.find((candidate) => getAreaIdValue(candidate) === parentId);
+      return parent && !parent.parentAreaId;
+    });
+  }, [allAreas, areaId]);
+
+  const parentAreaOptions = useMemo(() => {
+    if (selectedLevel === "1") return [];
+
+    if (selectedLevel === "2") {
+      return rootAreas.map((item) => ({
+        value: getAreaIdValue(item),
+        label: item.name,
+      }));
+    }
+
+    if (selectedLevel === "3") {
+      return level2Areas.map((item) => ({
+        value: getAreaIdValue(item),
+        label: item.name,
+      }));
+    }
+
+    return [];
+  }, [selectedLevel, rootAreas, level2Areas]);
+
+  useEffect(() => {
+    if (!area || !allAreas.length) return;
+
+    const inferredLevel = inferAreaLevel(area, allAreas);
+    const currentParentId = getParentIdValue(area.parentAreaId);
+
+    reset({
+      name: area.name || "",
+      code: area.code || "",
+      level: inferredLevel,
+      parentAreaId: inferredLevel === "1" ? "" : currentParentId,
+    });
+
+    setGeoFence(area.geoFence || null);
+  }, [area, allAreas, reset]);
+
+  useEffect(() => {
+    if (selectedLevel === "1") {
+      setValue("parentAreaId", "");
+    }
+  }, [selectedLevel, setValue]);
 
   const mutation = useMutation({
     mutationFn: ({ id, payload }) => updateArea(id, payload),
@@ -65,13 +143,21 @@ function EditAreaPage() {
     },
   });
 
-  const allAreas = areasQuery.data?.data || [];
-  const areaOptions = allAreas
-    .filter((item) => item.id !== areaId)
-    .map((item) => ({
-      value: item.id,
-      label: item.name,
-    }));
+  const handleReset = () => {
+    if (!area) return;
+
+    const inferredLevel = inferAreaLevel(area, allAreas);
+    const currentParentId = getParentIdValue(area.parentAreaId);
+
+    reset({
+      name: area.name || "",
+      code: area.code || "",
+      level: inferredLevel,
+      parentAreaId: inferredLevel === "1" ? "" : currentParentId,
+    });
+
+    setGeoFence(area.geoFence || null);
+  };
 
   const onSubmit = (values) => {
     mutation.mutate({
@@ -79,17 +165,27 @@ function EditAreaPage() {
       payload: {
         name: values.name,
         code: values.code,
-        parentAreaId: values.parentAreaId || null,
+        parentAreaId: values.level === "1" ? null : values.parentAreaId || null,
         geoFence: geoFence || undefined,
       },
     });
   };
 
-  if (areaQuery.isLoading) {
+  if (areaQuery.isLoading || areasQuery.isLoading) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
         Loading area data...
       </div>
+    );
+  }
+
+  if (areaQuery.isError || !area) {
+    return (
+      <Toast
+        variant="error"
+        title="Failed to load area"
+        description="The requested area could not be loaded."
+      />
     );
   }
 
@@ -98,10 +194,10 @@ function EditAreaPage() {
       <PageHeader
         eyebrow="Area Management"
         title="Edit Area"
-        description="Update area details and boundary definition."
+        description="Update area details, hierarchy, and boundary definition."
         breadcrumbs={[
           { label: "Areas", to: "/areas" },
-          { label: area?.name || "Area", to: `/areas/${areaId}` },
+          { label: area.name || "Area", to: `/areas/${areaId}` },
           { label: "Edit" },
         ]}
       />
@@ -125,7 +221,7 @@ function EditAreaPage() {
               <FormInput
                 label="Area Name"
                 name="name"
-                placeholder="e.g. Malabe Campus"
+                placeholder="e.g. Central Province"
                 register={register}
                 error={errors.name?.message}
                 disabled={mutation.isPending}
@@ -134,10 +230,23 @@ function EditAreaPage() {
               <FormInput
                 label="Area Code"
                 name="code"
-                placeholder="e.g. MLB"
+                placeholder="e.g. CENTRAL"
                 register={register}
                 error={errors.code?.message}
                 disabled={mutation.isPending}
+              />
+
+              <FormSelect
+                label="Level"
+                name="level"
+                register={register}
+                error={errors.level?.message}
+                disabled={mutation.isPending}
+                options={[
+                  { value: "1", label: "Level 1 - Province" },
+                  { value: "2", label: "Level 2 - District" },
+                  { value: "3", label: "Level 3 - Secretariat Division" },
+                ]}
               />
 
               <FormSelect
@@ -145,9 +254,17 @@ function EditAreaPage() {
                 name="parentAreaId"
                 register={register}
                 error={errors.parentAreaId?.message}
-                options={areaOptions}
-                placeholder="No parent area"
-                disabled={mutation.isPending || areasQuery.isLoading}
+                options={parentAreaOptions}
+                placeholder={
+                  selectedLevel === "1"
+                    ? "No parent area required"
+                    : selectedLevel === "2"
+                      ? "Select a province"
+                      : "Select a district"
+                }
+                disabled={
+                  mutation.isPending || selectedLevel === "1" || parentAreaOptions.length === 0
+                }
               />
             </div>
           </div>
@@ -175,7 +292,7 @@ function EditAreaPage() {
 
           <button
             type="button"
-            onClick={() => reset()}
+            onClick={handleReset}
             className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Reset

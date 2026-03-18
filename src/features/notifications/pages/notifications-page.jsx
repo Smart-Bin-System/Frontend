@@ -21,7 +21,7 @@ const notifications = [
   {
     id: 3,
     title: "Area updated successfully",
-    description: "Malabe Campus area information was updated.",
+    description: "BCI Campus area information was updated.",
     time: "1 hr ago",
     type: "info",
   },

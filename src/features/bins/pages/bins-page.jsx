@@ -11,7 +11,7 @@ const fallbackBins = [
     _id: "1",
     publicId: "BIN-9F2A1C",
     name: "Main Entrance Bin",
-    areaName: "Malabe Campus",
+    areaName: "BCI Campus",
     status: "online",
     lastSeen: "2 min ago",
     fillLevel: 74,

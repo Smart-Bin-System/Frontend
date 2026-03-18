@@ -36,8 +36,8 @@ const users = [
   },
   {
     id: 2,
-    name: "Pasindu",
-    email: "pasindu@example.com",
+    name: "Amishki",
+    email: "amishki@example.com",
     role: ROLES.ADMIN,
     status: "Active",
   },

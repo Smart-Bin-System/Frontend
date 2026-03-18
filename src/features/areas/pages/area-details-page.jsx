@@ -1,8 +1,9 @@
-import { Link, useParams } from "react-router";
-import { useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { GitBranch, MapPinned, Pencil, Plus, Trash2 } from "lucide-react";
-import { MapContainer, Polygon, TileLayer } from "react-leaflet";
+import { GitBranch, Pencil, Plus, Trash2 } from "lucide-react";
+import { MapContainer, Polygon, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
 import PageHeader from "@/components/ui/page-header";
 import SectionCard from "@/components/ui/card/section-card";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
@@ -23,8 +24,50 @@ function getMapPoints(geoFence) {
   return geoFence.coordinates[0].map(([lng, lat]) => [lat, lng]);
 }
 
+function getAreaTypeLabel(area) {
+  if (area?.level === 1) return "Province";
+  if (area?.level === 2) return "District";
+  if (area?.level === 3) return "City";
+  return "Linked Administrative Area";
+}
+
+function getParentAreaName(parentAreaId) {
+  if (!parentAreaId) return "No parent area";
+  if (typeof parentAreaId === "object" && parentAreaId?.name) {
+    return parentAreaId.name;
+  }
+  return "Parent linked";
+}
+
+function FitPolygonBounds({ points }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!points?.length) return;
+    const bounds = L.latLngBounds(points);
+    map.fitBounds(bounds, { padding: [20, 20] });
+  }, [map, points]);
+
+  return null;
+}
+
+function createMaskPolygon(points) {
+  if (!points?.length) return [];
+
+  const worldRing = [
+    [90, -180],
+    [90, 180],
+    [-90, 180],
+    [-90, -180],
+    [90, -180],
+  ];
+
+  return [worldRing, points];
+}
+
 function AreaDetailsPage() {
   const { areaId } = useParams();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -40,7 +83,7 @@ function AreaDetailsPage() {
     mutationFn: () => deleteArea(areaId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["areas"] });
-      window.location.href = "/areas";
+      navigate("/areas");
     },
   });
 
@@ -63,6 +106,7 @@ function AreaDetailsPage() {
   }
 
   const polygonPoints = getMapPoints(area.geoFence);
+  const maskPolygon = createMaskPolygon(polygonPoints);
 
   return (
     <div className="space-y-6">
@@ -119,24 +163,17 @@ function AreaDetailsPage() {
               </div>
 
               <div className="rounded-xl bg-slate-50 p-4">
+                <span className="text-xs uppercase tracking-wider text-slate-500">Area Type</span>
+                <p className="mt-2 text-sm font-medium text-slate-900">{getAreaTypeLabel(area)}</p>
+              </div>
+
+              <div className="rounded-xl bg-slate-50 p-4">
                 <div className="flex items-center gap-2 text-slate-500">
                   <GitBranch className="h-4 w-4" />
                   <span className="text-xs uppercase tracking-wider">Parent Area</span>
                 </div>
                 <p className="mt-2 text-sm font-medium text-slate-900">
-                  {typeof area.parentAreaId === "object"
-                    ? area.parentAreaId?.name || "Parent Linked"
-                    : area.parentAreaId || "No parent area"}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-4">
-                <div className="flex items-center gap-2 text-slate-500">
-                  <MapPinned className="h-4 w-4" />
-                  <span className="text-xs uppercase tracking-wider">Geo Fence</span>
-                </div>
-                <p className="mt-2 text-sm font-medium text-slate-900">
-                  {area.geoFence ? "Configured" : "Not configured"}
+                  {getParentAreaName(area.parentAreaId)}
                 </p>
               </div>
             </div>
@@ -165,7 +202,10 @@ function AreaDetailsPage() {
           </SectionCard>
         </div>
 
-        <SectionCard title="Geofence Preview" description="Spatial boundary of the selected area">
+        <SectionCard
+          title="Selected Geofence Preview"
+          description="Only the selected area boundary is highlighted and focused"
+        >
           {polygonPoints.length >= 3 ? (
             <div className="overflow-hidden rounded-2xl border border-slate-200">
               <MapContainer
@@ -174,16 +214,36 @@ function AreaDetailsPage() {
                 scrollWheelZoom
                 className="h-105 w-full"
               >
+                <FitPolygonBounds points={polygonPoints} />
+
                 <TileLayer
                   attribution="&copy; OpenStreetMap contributors"
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Polygon positions={polygonPoints} />
+
+                <Polygon
+                  positions={maskPolygon}
+                  pathOptions={{
+                    fillColor: "#020618",
+                    fillOpacity: 0.45,
+                    stroke: false,
+                  }}
+                />
+
+                <Polygon
+                  positions={polygonPoints}
+                  pathOptions={{
+                    color: "#00bc7d",
+                    weight: 3,
+                    fillColor: "#00bc7d",
+                    fillOpacity: 0.2,
+                  }}
+                />
               </MapContainer>
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center text-sm text-slate-500">
-              No geofence configured for this area.
+              No boundary preview available for this area.
             </div>
           )}
         </SectionCard>

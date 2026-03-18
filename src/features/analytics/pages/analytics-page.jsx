@@ -21,14 +21,14 @@ import SectionCard from "@/components/ui/card/section-card";
 import { BarChart3, ChartNoAxesColumn, Layers3, PieChart as PieChartIcon } from "lucide-react";
 
 const wasteTypesByArea = [
-  { area: "Malabe", PET: 240, HDPE: 160, LDPE: 120, PP: 190 },
+  { area: "BCI", PET: 240, HDPE: 160, LDPE: 120, PP: 190 },
   { area: "Library", PET: 130, HDPE: 90, LDPE: 70, PP: 100 },
   { area: "Food Court", PET: 280, HDPE: 170, LDPE: 150, PP: 210 },
   { area: "Hostel", PET: 200, HDPE: 120, LDPE: 100, PP: 140 },
 ];
 
 const wasteDistributionAreas = [
-  { name: "Malabe", value: 31, color: "#10b981" },
+  { name: "BCI", value: 31, color: "#10b981" },
   { name: "Library", value: 16, color: "#3b82f6" },
   { name: "Food Court", value: 34, color: "#f59e0b" },
   { name: "Hostel", value: 19, color: "#ef4444" },

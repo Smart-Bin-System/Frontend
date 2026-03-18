@@ -6,7 +6,7 @@ const fallbackAlerts = [
   {
     _id: "1",
     binId: "BIN-9F2A1C",
-    area: "Malabe Campus",
+    area: "BCI Campus",
     type: "Bin Full",
     severity: "High",
     message: "Bin capacity exceeded 90%",
