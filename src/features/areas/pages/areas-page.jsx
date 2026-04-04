@@ -199,7 +199,7 @@ function AreasPage() {
     queryFn: getAreas,
   });
 
-  const allAreas = data?.data || [];
+  const allAreas = useMemo(() => data?.data || [], [data]);
   const roots = useMemo(() => buildAreaTree(allAreas), [allAreas]);
   const flattened = useMemo(() => flattenTreeByDepth(roots), [roots]);
 

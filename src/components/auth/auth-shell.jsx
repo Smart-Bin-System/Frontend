@@ -11,7 +11,7 @@ function AuthShell({ title, description, children, footer }) {
               <Boxes className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold">Mihashi's Smart Bin</h1>
+              <h1 className="text-lg font-semibold">Mihashi&#8217;s Smart Bin</h1>
               <p className="text-sm text-slate-400">Waste Management Console</p>
             </div>
           </div>
