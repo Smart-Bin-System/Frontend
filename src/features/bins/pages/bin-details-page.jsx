@@ -1,39 +1,19 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Cpu, MapPinned, RefreshCw, Trash2, Waypoints } from "lucide-react";
 import axiosClient from "@/lib/axios";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
-import Toast from "@/components/ui/toast";
-
-const fallbackBin = {
-  _id: "1",
-  publicId: "BIN-9F2A1C",
-  name: "Main Entrance Bin",
-  description: "Smart waste bin near the main entrance",
-  status: "online",
-  areaName: "BCI Campus",
-  fillLevel: 74,
-  lastSeen: "2 min ago",
-  device: {
-    esp32ChipId: "ESP32-7A91X",
-    firmwareVersion: "1.0.4",
-    cnnModelVersion: "cnn-v2",
-  },
-  location: {
-    address: "Main Entrance, BCI Campus",
-  },
-  compartments: [
-    { type: "PET", fillLevel: 82, status: "warning" },
-    { type: "HDPE", fillLevel: 51, status: "normal" },
-    { type: "LDPE", fillLevel: 35, status: "normal" },
-    { type: "PP", fillLevel: 91, status: "critical" },
-  ],
-};
+import PageHeader from "@/components/ui/page-header";
 
 const getBinById = async (binId) => {
   const response = await axiosClient.get(`/bins/${binId}`);
+  return response.data;
+};
+
+const deleteBin = async (id) => {
+  const response = await axiosClient.delete(`/bins/${id}`);
   return response.data;
 };
 
@@ -43,11 +23,20 @@ function getBarClass(fillLevel) {
   return "bg-emerald-500";
 }
 
+function formatDateTime(value) {
+  if (!value) return "N/A";
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) return value;
+
+  return parsedDate.toLocaleString();
+}
+
 function BinDetailsPage() {
   const { binId } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [showToast, setShowToast] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["bin", binId],
@@ -55,49 +44,120 @@ function BinDetailsPage() {
     enabled: Boolean(binId),
   });
 
-  const bin = useMemo(() => data?.data || data || fallbackBin, [data]);
+  const bin = useMemo(() => {
+    const apiBin = data?.data || data;
+
+    if (!apiBin || typeof apiBin !== "object") {
+      return {
+        publicId: "N/A",
+        name: "Unknown Bin",
+        description: "",
+        status: "offline",
+        fillLevel: 0,
+        lastSeen: "N/A",
+        areaName: "Unassigned",
+        compartments: [],
+        device: {},
+        location: {},
+      };
+    }
+
+    const compartmentFillLevels = Array.isArray(apiBin.compartments)
+      ? apiBin.compartments
+          .map((compartment) => Number(compartment?.fillLevel ?? compartment?.fillPercent))
+          .filter((value) => Number.isFinite(value))
+      : [];
+
+    const directFillLevel = Number(apiBin.fillLevel);
+    const resolvedFillLevel = Number.isFinite(directFillLevel)
+      ? directFillLevel
+      : compartmentFillLevels.length > 0
+        ? Math.max(...compartmentFillLevels)
+        : 0;
+
+    const normalizedStatus =
+      typeof apiBin.status === "object"
+        ? apiBin.status?.isOnline
+          ? "online"
+          : "offline"
+        : String(apiBin.status || "offline").toLowerCase() === "online"
+          ? "online"
+          : "offline";
+
+    const normalizedCompartments = Array.isArray(apiBin.compartments)
+      ? apiBin.compartments.map((compartment) => ({
+          ...compartment,
+          type: compartment.type || compartment.name || "Unknown",
+          fillLevel: Number.isFinite(Number(compartment.fillLevel ?? compartment.fillPercent))
+            ? Number(compartment.fillLevel ?? compartment.fillPercent)
+            : 0,
+        }))
+      : [];
+
+    return {
+      ...apiBin,
+      status: normalizedStatus,
+      fillLevel: Math.min(Math.max(Math.round(resolvedFillLevel), 0), 100),
+      lastSeen: formatDateTime(apiBin.lastSeen || apiBin.status?.lastSeenAt),
+      areaName: apiBin.areaId?.name || "Unassigned",
+      compartments: normalizedCompartments,
+    };
+  }, [data]);
+
+  const isSynced = String(bin.pairing?.status || "").toLowerCase() === "paired";
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteBin,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["bins"] });
+      queryClient.invalidateQueries({ queryKey: ["bin", binId] });
+      navigate("/bins");
+    },
+  });
 
   return (
     <div className="space-y-6">
-      {showToast ? (
-        <Toast
-          variant="warning"
-          title="UI-only delete flow"
-          description="Delete action is prepared in the interface and will be wired later."
-        />
+      {deleteMutation.isError ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          {deleteMutation.error?.response?.data?.message ||
+            "Failed to delete bin. Please try again."}
+        </div>
       ) : null}
 
-      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm font-medium text-emerald-600">{bin.publicId}</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-900">{bin.name}</h2>
-          <p className="mt-2 text-sm text-slate-500">
-            {bin.description || "No description available"}
-          </p>
-        </div>
+      <PageHeader
+        eyebrow={bin.publicId}
+        title={bin.name}
+        description={bin.description || "No description available"}
+        breadcrumbs={[{ label: "Bins", to: "/bins" }, { label: bin.name || "Bin" }]}
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-
-          <button
-            type="button"
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
-          >
-            Sync Bin
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (isSynced) {
+                  navigate(`/bins/${binId}/edit`);
+                }
+              }}
+              className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+            >
+              {isSynced ? "Edit Bin" : "Sync Bin"}
+            </button>
+          </>
+        }
+      />
 
       {isError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          Failed to load this bin from the API. Showing fallback sample data.
+          Failed to load this bin from the API.
         </div>
       )}
 
@@ -266,13 +326,13 @@ function BinDetailsPage() {
       <ConfirmModal
         open={deleteOpen}
         title="Delete bin"
-        description={`Are you sure you want to delete ${bin.name}? This action is currently UI-only and will be wired later.`}
+        description={`Are you sure you want to delete ${bin.name}? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
+        loading={deleteMutation.isPending}
         onCancel={() => setDeleteOpen(false)}
         onConfirm={() => {
-          setDeleteOpen(false);
-          setShowToast(true);
+          deleteMutation.mutate(binId);
         }}
       />
     </div>
