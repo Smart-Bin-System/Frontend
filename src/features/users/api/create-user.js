@@ -3,7 +3,7 @@ import { ROLES } from "@/constants/roles";
 
 export async function createUser(payload) {
   const endpoint = payload.role === ROLES.ADMIN ? "/users/createAdmin" : "/users/createWorker";
-  
+
   const requestPayload = {
     name: payload.name,
     email: payload.email,
