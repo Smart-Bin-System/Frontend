@@ -20,6 +20,9 @@ import SettingsPage from "@/features/settings/pages/settings-page";
 import ProfilePage from "@/features/profile/pages/profile-page";
 import NotificationsPage from "@/features/notifications/pages/notifications-page";
 import UsersPage from "@/features/users/pages/users-page";
+import CreateUserPage from "@/features/users/pages/create-user-page";
+import UserDetailsPage from "@/features/users/pages/user-details-page";
+import EditUserPage from "@/features/users/pages/edit-user-page";
 import RolesPage from "@/features/roles/pages/roles-page";
 import SecurityPage from "@/features/security/pages/security-page";
 import AppearancePage from "@/features/appearance/pages/appearance-page";
@@ -92,6 +95,12 @@ function AppRouter() {
 
           <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_USERS]} />}>
             <Route path="settings/users" element={<UsersPage />} />
+            <Route path="settings/users/:userId" element={<UserDetailsPage />} />
+          </Route>
+
+          <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.MANAGE_USERS]} />}>
+            <Route path="settings/users/new" element={<CreateUserPage />} />
+            <Route path="settings/users/:userId/edit" element={<EditUserPage />} />
           </Route>
 
           <Route element={<RoleRoute requiredPermissions={[PERMISSIONS.VIEW_ROLES]} />}>

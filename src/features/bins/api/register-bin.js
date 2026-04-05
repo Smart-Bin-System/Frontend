@@ -1,6 +1,6 @@
 import axiosClient from "@/lib/axios";
 
-export async function updateBin(binId, values) {
+export async function registerBin(values) {
   const hasLatitude =
     values.latitude !== undefined &&
     values.latitude !== null &&
@@ -31,6 +31,6 @@ export async function updateBin(binId, values) {
     assignedWorkerId: values.assignedWorkerId?.trim() || null,
   };
 
-  const response = await axiosClient.put(`/bins/${binId}`, payload);
-  return response.data;
+  const { data } = await axiosClient.post("/bins/register", payload);
+  return data;
 }

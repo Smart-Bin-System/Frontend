@@ -33,7 +33,7 @@ function getParentName(area, allAreas) {
 function getHierarchyType(depth) {
   if (depth === 0) return "Province";
   if (depth === 1) return "District";
-  if (depth === 2) return "Secretariat Division";
+  if (depth === 2) return "City";
   return `Level ${depth + 1}`;
 }
 
@@ -199,7 +199,7 @@ function AreasPage() {
     queryFn: getAreas,
   });
 
-  const allAreas = data?.data || [];
+  const allAreas = useMemo(() => data?.data || [], [data]);
   const roots = useMemo(() => buildAreaTree(allAreas), [allAreas]);
   const flattened = useMemo(() => flattenTreeByDepth(roots), [roots]);
 

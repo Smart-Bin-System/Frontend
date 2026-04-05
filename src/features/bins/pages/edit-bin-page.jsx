@@ -1,49 +1,42 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axiosClient from "@/lib/axios";
 import FormInput from "@/components/ui/input/form-input";
 import FormTextarea from "@/components/ui/input/form-textarea";
-import FormSelect from "@/components/ui/input/form-select";
+import SearchableSelect from "@/components/ui/input/searchable-select";
 import PageHeader from "@/components/ui/page-header";
 import { createBinSchema } from "@/features/bins/schemas/create-bin-schema";
+import { getBinById } from "@/features/bins/api/get-bin-by-id";
+import { updateBin } from "@/features/bins/api/update-bin";
+import { getAreas } from "@/features/areas/api/get-areas";
+import { getAdmins } from "@/features/users/api/get-admins";
+import { getWorkers } from "@/features/users/api/get-workers";
 
-const fallbackBin = {
-  _id: "1",
-  name: "Main Entrance Bin",
-  description: "Smart waste bin near the main entrance",
-  areaId: "1",
-  location: {
-    address: "Main Entrance, BCI Campus",
-  },
-  device: {
-    esp32ChipId: "ESP32-7A91X",
-    firmwareVersion: "1.0.4",
-    cnnModelVersion: "cnn-v2",
-  },
-};
+function getUserOptions(data) {
+  const users = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
 
-const fallbackAreas = [
-  { _id: "1", name: "BCI Campus" },
-  { _id: "2", name: "Library Zone" },
-];
+  return users.map((user) => {
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+    const label = fullName || user.name || user.email || user.username || user._id;
 
-const getBinById = async (binId) => {
-  const response = await axiosClient.get(`/bins/${binId}`);
-  return response.data;
-};
+    return {
+      value: String(user._id || user.id || ""),
+      label,
+    };
+  });
+}
 
-const getAreas = async () => {
-  const response = await axiosClient.get("/areas");
-  return response.data;
-};
+function getAreaIdFromBin(bin) {
+  const rawArea = bin?.areaId || bin?.area?._id || "";
 
-const updateBin = async ({ binId, payload }) => {
-  const response = await axiosClient.put(`/bins/${binId}`, payload);
-  return response.data;
-};
+  if (rawArea && typeof rawArea === "object") {
+    return String(rawArea._id || rawArea.id || "");
+  }
+
+  return String(rawArea || "");
+}
 
 function EditBinPage() {
   const { binId } = useParams();
@@ -61,34 +54,147 @@ function EditBinPage() {
     queryFn: getAreas,
   });
 
-  const bin = useMemo(() => binQuery.data?.data || binQuery.data || fallbackBin, [binQuery.data]);
+  const adminsQuery = useQuery({
+    queryKey: ["users", "admins"],
+    queryFn: getAdmins,
+  });
 
-  const areas = areasQuery.data?.data || areasQuery.data || fallbackAreas;
-  const areaOptions = areas.map((area) => ({
-    value: area._id,
-    label: area.name,
-  }));
+  const workersQuery = useQuery({
+    queryKey: ["users", "workers"],
+    queryFn: getWorkers,
+  });
+
+  const bin = useMemo(() => binQuery.data?.data || binQuery.data || null, [binQuery.data]);
+  const areas = useMemo(() => areasQuery.data?.data || areasQuery.data || [], [areasQuery.data]);
+
+  const areasById = useMemo(() => {
+    return new Map(areas.map((area) => [String(area._id), area]));
+  }, [areas]);
+
+  const areaIdFromBin = useMemo(() => {
+    return getAreaIdFromBin(bin);
+  }, [bin]);
+
+  const selectedArea = useMemo(() => {
+    if (!areaIdFromBin) return null;
+    return areasById.get(areaIdFromBin) || null;
+  }, [areaIdFromBin, areasById]);
+
+  const provinceIdFromBin = useMemo(() => {
+    if (!selectedArea) return "";
+
+    if (Number(selectedArea.level) === 1) return String(selectedArea._id);
+    if (Number(selectedArea.level) === 2) return String(selectedArea.parentAreaId || "");
+
+    if (Number(selectedArea.level) === 3) {
+      const district = areasById.get(String(selectedArea.parentAreaId));
+      return String(district?.parentAreaId || "");
+    }
+
+    return "";
+  }, [areasById, selectedArea]);
+
+  const districtIdFromBin = useMemo(() => {
+    if (!selectedArea) return "";
+
+    if (Number(selectedArea.level) === 2) return String(selectedArea._id);
+    if (Number(selectedArea.level) === 3) return String(selectedArea.parentAreaId || "");
+
+    return "";
+  }, [selectedArea]);
 
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(createBinSchema),
-    values: {
-      name: bin.name || "",
-      description: bin.description || "",
-      areaId: bin.areaId || bin.area?._id || "",
-      address: bin.location?.address || "",
-      esp32ChipId: bin.device?.esp32ChipId || "",
-      firmwareVersion: bin.device?.firmwareVersion || "",
-      cnnModelVersion: bin.device?.cnnModelVersion || "",
+    defaultValues: {
+      name: "",
+      description: "",
+      provinceId: "",
+      districtId: "",
+      areaId: "",
+      address: "",
+      latitude: "",
+      longitude: "",
+      assignedAdminId: "",
+      assignedWorkerId: "",
     },
   });
 
+  const provinceId = useWatch({ control, name: "provinceId" }) || "";
+  const districtId = useWatch({ control, name: "districtId" }) || "";
+  const areaId = useWatch({ control, name: "areaId" }) || "";
+  const assignedAdminId = useWatch({ control, name: "assignedAdminId" }) || "";
+  const assignedWorkerId = useWatch({ control, name: "assignedWorkerId" }) || "";
+
+  const provinces = useMemo(() => areas.filter((area) => Number(area.level) === 1), [areas]);
+
+  const districts = useMemo(
+    () =>
+      areas.filter(
+        (area) => Number(area.level) === 2 && String(area.parentAreaId) === String(provinceId),
+      ),
+    [areas, provinceId],
+  );
+
+  const cities = useMemo(
+    () =>
+      areas.filter(
+        (area) => Number(area.level) === 3 && String(area.parentAreaId) === String(districtId),
+      ),
+    [areas, districtId],
+  );
+
+  const provinceOptions = provinces.map((area) => ({
+    value: area._id,
+    label: area.name,
+  }));
+
+  const districtOptions = districts.map((area) => ({
+    value: area._id,
+    label: area.name,
+  }));
+
+  const cityOptions = cities.map((area) => ({
+    value: area._id,
+    label: area.name,
+  }));
+
+  const adminOptions = useMemo(() => getUserOptions(adminsQuery.data), [adminsQuery.data]);
+  const workerOptions = useMemo(() => getUserOptions(workersQuery.data), [workersQuery.data]);
+
+  useEffect(() => {
+    if (!bin) return;
+
+    const coordinates = bin.location?.geo?.coordinates;
+
+    reset({
+      name: bin.name || "",
+      description: bin.description || "",
+      provinceId: provinceIdFromBin,
+      districtId: districtIdFromBin,
+      areaId: areaIdFromBin,
+      address: bin.location?.address || "",
+      latitude:
+        Array.isArray(coordinates) && coordinates.length > 1 && coordinates[1] !== null
+          ? String(coordinates[1])
+          : "",
+      longitude:
+        Array.isArray(coordinates) && coordinates.length > 0 && coordinates[0] !== null
+          ? String(coordinates[0])
+          : "",
+      assignedAdminId: bin.assignedAdminId || "",
+      assignedWorkerId: bin.assignedWorkerId || "",
+    });
+  }, [areaIdFromBin, bin, districtIdFromBin, provinceIdFromBin, reset]);
+
   const mutation = useMutation({
-    mutationFn: updateBin,
+    mutationFn: (values) => updateBin(binId, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bins"] });
       queryClient.invalidateQueries({ queryKey: ["bin", binId] });
@@ -97,22 +203,7 @@ function EditBinPage() {
   });
 
   const onSubmit = (values) => {
-    mutation.mutate({
-      binId,
-      payload: {
-        name: values.name,
-        description: values.description,
-        areaId: values.areaId,
-        location: {
-          address: values.address,
-        },
-        device: {
-          esp32ChipId: values.esp32ChipId || null,
-          firmwareVersion: values.firmwareVersion || "",
-          cnnModelVersion: values.cnnModelVersion || "",
-        },
-      },
-    });
+    mutation.mutate(values);
   };
 
   if (binQuery.isLoading) {
@@ -128,17 +219,17 @@ function EditBinPage() {
       <PageHeader
         eyebrow="Bin Management"
         title="Edit Bin"
-        description="Update smart bin information and assigned area."
+        description="Update smart bin information and connect it to an operational area."
         breadcrumbs={[
           { label: "Bins", to: "/bins" },
-          { label: bin.name || "Bin", to: `/bins/${binId}` },
+          { label: bin?.name || "Bin", to: `/bins/${binId}` },
           { label: "Edit" },
         ]}
       />
 
       {(binQuery.isError || areasQuery.isError) && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          Some data could not be loaded from the API. Fallback sample data is being used.
+          Some data could not be loaded from the API.
         </div>
       )}
 
@@ -156,14 +247,41 @@ function EditBinPage() {
             disabled={mutation.isPending}
           />
 
-          <FormSelect
-            label="Area"
-            name="areaId"
-            register={register}
-            error={errors.areaId?.message}
-            options={areaOptions}
-            placeholder={areasQuery.isLoading ? "Loading areas..." : "Select an area"}
+          <SearchableSelect
+            label="Province"
+            value={provinceId}
+            onChange={(value) => {
+              setValue("provinceId", value, { shouldValidate: true });
+              setValue("districtId", "", { shouldValidate: true });
+              setValue("areaId", "", { shouldValidate: true });
+            }}
+            error={errors.provinceId?.message}
+            options={provinceOptions}
+            placeholder={areasQuery.isLoading ? "Loading provinces..." : "Select a province"}
             disabled={mutation.isPending || areasQuery.isLoading}
+          />
+
+          <SearchableSelect
+            label="District"
+            value={districtId}
+            onChange={(value) => {
+              setValue("districtId", value, { shouldValidate: true });
+              setValue("areaId", "", { shouldValidate: true });
+            }}
+            error={errors.districtId?.message}
+            options={districtOptions}
+            placeholder={!provinceId ? "Select a province first" : "Select a district"}
+            disabled={mutation.isPending || !provinceId}
+          />
+
+          <SearchableSelect
+            label="City"
+            value={areaId}
+            onChange={(value) => setValue("areaId", value, { shouldValidate: true })}
+            error={errors.areaId?.message}
+            options={cityOptions}
+            placeholder={!districtId ? "Select a district first" : "Select a city"}
+            disabled={mutation.isPending || !districtId}
           />
 
           <div className="md:col-span-2">
@@ -189,36 +307,60 @@ function EditBinPage() {
           </div>
 
           <FormInput
-            label="ESP32 Chip ID"
-            name="esp32ChipId"
-            placeholder="Optional device chip ID"
+            label="Latitude"
+            name="latitude"
+            placeholder="e.g. 6.9271"
             register={register}
-            error={errors.esp32ChipId?.message}
+            error={errors.latitude?.message}
             disabled={mutation.isPending}
           />
 
           <FormInput
-            label="Firmware Version"
-            name="firmwareVersion"
-            placeholder="e.g. 1.0.4"
+            label="Longitude"
+            name="longitude"
+            placeholder="e.g. 79.8612"
             register={register}
-            error={errors.firmwareVersion?.message}
+            error={errors.longitude?.message}
             disabled={mutation.isPending}
           />
 
-          <FormInput
-            label="CNN Model Version"
-            name="cnnModelVersion"
-            placeholder="e.g. cnn-v2"
-            register={register}
-            error={errors.cnnModelVersion?.message}
-            disabled={mutation.isPending}
+          <SearchableSelect
+            label="Assigned Admin"
+            value={assignedAdminId}
+            onChange={(value) => setValue("assignedAdminId", value, { shouldValidate: true })}
+            error={errors.assignedAdminId?.message}
+            options={adminOptions}
+            placeholder={adminsQuery.isLoading ? "Loading admins..." : "Select an admin"}
+            disabled={mutation.isPending || adminsQuery.isLoading}
+          />
+
+          <SearchableSelect
+            label="Assigned Worker"
+            value={assignedWorkerId}
+            onChange={(value) => setValue("assignedWorkerId", value, { shouldValidate: true })}
+            error={errors.assignedWorkerId?.message}
+            options={workerOptions}
+            placeholder={workersQuery.isLoading ? "Loading workers..." : "Select a worker"}
+            disabled={mutation.isPending || workersQuery.isLoading}
           />
         </div>
 
+        {areasQuery.isError ? (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+            Failed to load areas. Bin update needs a valid area from the backend.
+          </div>
+        ) : null}
+
+        {adminsQuery.isError || workersQuery.isError ? (
+          <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+            Failed to load admin or worker users. Assignment fields are currently unavailable.
+          </div>
+        ) : null}
+
         {mutation.isError ? (
           <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-            Failed to update bin. Please try again.
+            {mutation.error?.response?.data?.message ||
+              "Failed to update bin. Please verify the backend payload shape and try again."}
           </div>
         ) : null}
 

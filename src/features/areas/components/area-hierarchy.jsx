@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { ChevronRight, FolderTree, MapPinned } from "lucide-react";
+import { ChevronRight, MapPinned } from "lucide-react";
 import { buildAreaTree, getAreaDepthLabel } from "@/features/areas/utils/area-tree";
 
 function AreaNode({ node, level = 0 }) {

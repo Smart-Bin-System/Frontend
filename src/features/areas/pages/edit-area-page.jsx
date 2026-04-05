@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useMemo } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FormInput from "@/components/ui/input/form-input";
@@ -39,7 +39,6 @@ function EditAreaPage() {
   const { areaId } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [geoFence, setGeoFence] = useState(null);
 
   const areaQuery = useQuery({
     queryKey: ["area", areaId],
@@ -59,7 +58,7 @@ function EditAreaPage() {
     register,
     handleSubmit,
     reset,
-    watch,
+    control,
     setValue,
     formState: { errors },
   } = useForm({
@@ -69,10 +68,21 @@ function EditAreaPage() {
       code: "",
       level: "1",
       parentAreaId: "",
+      geoFence: null,
     },
   });
 
-  const selectedLevel = watch("level");
+  const selectedLevel = useWatch({
+    control,
+    name: "level",
+    defaultValue: "1",
+  });
+
+  const geoFence = useWatch({
+    control,
+    name: "geoFence",
+    defaultValue: null,
+  });
 
   const rootAreas = useMemo(() => {
     return allAreas.filter((item) => !item.parentAreaId && getAreaIdValue(item) !== areaId);
@@ -122,9 +132,8 @@ function EditAreaPage() {
       code: area.code || "",
       level: inferredLevel,
       parentAreaId: inferredLevel === "1" ? "" : currentParentId,
+      geoFence: area.geoFence || null,
     });
-
-    setGeoFence(area.geoFence || null);
   }, [area, allAreas, reset]);
 
   useEffect(() => {
@@ -154,9 +163,8 @@ function EditAreaPage() {
       code: area.code || "",
       level: inferredLevel,
       parentAreaId: inferredLevel === "1" ? "" : currentParentId,
+      geoFence: area.geoFence || null,
     });
-
-    setGeoFence(area.geoFence || null);
   };
 
   const onSubmit = (values) => {
@@ -276,7 +284,10 @@ function EditAreaPage() {
             </p>
 
             <div className="mt-5">
-              <GeofenceMapEditor value={geoFence} onChange={setGeoFence} />
+              <GeofenceMapEditor
+                value={geoFence}
+                onChange={(value) => setValue("geoFence", value, { shouldDirty: true })}
+              />
             </div>
           </div>
         </div>
