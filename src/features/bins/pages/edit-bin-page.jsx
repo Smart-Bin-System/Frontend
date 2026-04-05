@@ -3,32 +3,16 @@ import { useEffect, useMemo } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axiosClient from "@/lib/axios";
 import FormInput from "@/components/ui/input/form-input";
 import FormTextarea from "@/components/ui/input/form-textarea";
 import SearchableSelect from "@/components/ui/input/searchable-select";
 import PageHeader from "@/components/ui/page-header";
 import { createBinSchema } from "@/features/bins/schemas/create-bin-schema";
-
-const getBinById = async (binId) => {
-  const response = await axiosClient.get(`/bins/${binId}`);
-  return response.data;
-};
-
-const getAreas = async () => {
-  const response = await axiosClient.get("/areas");
-  return response.data;
-};
-
-const getAdmins = async () => {
-  const response = await axiosClient.get("/users/admins");
-  return response.data;
-};
-
-const getWorkers = async () => {
-  const response = await axiosClient.get("/users/workers");
-  return response.data;
-};
+import { getBinById } from "@/features/bins/api/get-bin-by-id";
+import { updateBin } from "@/features/bins/api/update-bin";
+import { getAreas } from "@/features/areas/api/get-areas";
+import { getAdmins } from "@/features/users/api/get-admins";
+import { getWorkers } from "@/features/users/api/get-workers";
 
 function getUserOptions(data) {
   const users = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
@@ -53,11 +37,6 @@ function getAreaIdFromBin(bin) {
 
   return String(rawArea || "");
 }
-
-const updateBin = async ({ binId, payload }) => {
-  const response = await axiosClient.put(`/bins/${binId}`, payload);
-  return response.data;
-};
 
 function EditBinPage() {
   const { binId } = useParams();
@@ -215,7 +194,7 @@ function EditBinPage() {
   }, [areaIdFromBin, bin, districtIdFromBin, provinceIdFromBin, reset]);
 
   const mutation = useMutation({
-    mutationFn: updateBin,
+    mutationFn: (values) => updateBin(binId, values),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bins"] });
       queryClient.invalidateQueries({ queryKey: ["bin", binId] });
@@ -224,38 +203,7 @@ function EditBinPage() {
   });
 
   const onSubmit = (values) => {
-    const hasLatitude =
-      values.latitude !== undefined &&
-      values.latitude !== null &&
-      String(values.latitude).trim() !== "";
-
-    const hasLongitude =
-      values.longitude !== undefined &&
-      values.longitude !== null &&
-      String(values.longitude).trim() !== "";
-
-    const geo =
-      hasLatitude && hasLongitude
-        ? {
-            type: "Point",
-            coordinates: [Number(values.longitude), Number(values.latitude)],
-          }
-        : null;
-
-    mutation.mutate({
-      binId,
-      payload: {
-        name: values.name,
-        description: values.description || "",
-        areaId: values.areaId,
-        location: {
-          address: values.address || "",
-          geo,
-        },
-        assignedAdminId: values.assignedAdminId?.trim() || null,
-        assignedWorkerId: values.assignedWorkerId?.trim() || null,
-      },
-    });
+    mutation.mutate(values);
   };
 
   if (binQuery.isLoading) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { Pencil, RefreshCw, Trash2, Wifi, WifiOff } from "lucide-react";
@@ -18,15 +18,6 @@ function getStatusClass(status) {
   return status === "online" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
 }
 
-function formatLastSeen(value) {
-  if (!value) return "N/A";
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return value;
-
-  return parsedDate.toLocaleString();
-}
-
 function BinsPage() {
   const [search, setSearch] = useState("");
 
@@ -35,43 +26,7 @@ function BinsPage() {
     queryFn: getBins,
   });
 
-  const allBins = useMemo(() => {
-    const responseBins = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-
-    return responseBins.map((bin) => {
-      const compartmentFillLevels = Array.isArray(bin.compartments)
-        ? bin.compartments
-            .map((compartment) => Number(compartment?.fillPercent))
-            .filter((value) => Number.isFinite(value))
-        : [];
-
-      const directFillLevel = Number(bin.fillLevel);
-      const resolvedFillLevel = Number.isFinite(directFillLevel)
-        ? directFillLevel
-        : compartmentFillLevels.length > 0
-          ? Math.max(...compartmentFillLevels)
-          : 0;
-
-      const statusValue =
-        typeof bin.status === "object"
-          ? bin.status?.isOnline
-            ? "online"
-            : "offline"
-          : String(bin.status || "offline").toLowerCase() === "online"
-            ? "online"
-            : "offline";
-
-      return {
-        ...bin,
-        publicId: bin.publicId || "N/A",
-        name: bin.name || "Unnamed Bin",
-        areaName: bin.areaId?.name || "Unassigned",
-        status: statusValue,
-        fillLevel: Math.min(Math.max(Math.round(resolvedFillLevel), 0), 100),
-        lastSeen: formatLastSeen(bin.lastSeen || bin.status?.lastSeenAt),
-      };
-    });
-  }, [data]);
+  const allBins = Array.isArray(data) ? data : [];
 
   const bins = allBins.filter((bin) => {
     return (

@@ -2,34 +2,16 @@ import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Cpu, MapPinned, RefreshCw, Trash2, Waypoints } from "lucide-react";
-import axiosClient from "@/lib/axios";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
 import PageHeader from "@/components/ui/page-header";
-
-const getBinById = async (binId) => {
-  const response = await axiosClient.get(`/bins/${binId}`);
-  return response.data;
-};
-
-const deleteBin = async (id) => {
-  const response = await axiosClient.delete(`/bins/${id}`);
-  return response.data;
-};
+import { getBinById } from "@/features/bins/api/get-bin-by-id";
+import { deleteBin } from "@/features/bins/api/delete-bin";
 
 function getBarClass(fillLevel) {
   if (fillLevel >= 85) return "bg-rose-500";
   if (fillLevel >= 60) return "bg-amber-500";
   return "bg-emerald-500";
-}
-
-function formatDateTime(value) {
-  if (!value) return "N/A";
-
-  const parsedDate = new Date(value);
-  if (Number.isNaN(parsedDate.getTime())) return value;
-
-  return parsedDate.toLocaleString();
 }
 
 function BinDetailsPage() {
@@ -45,66 +27,23 @@ function BinDetailsPage() {
   });
 
   const bin = useMemo(() => {
-    const apiBin = data?.data || data;
-
-    if (!apiBin || typeof apiBin !== "object") {
-      return {
-        publicId: "N/A",
-        name: "Unknown Bin",
-        description: "",
-        status: "offline",
-        fillLevel: 0,
-        lastSeen: "N/A",
-        areaName: "Unassigned",
-        compartments: [],
-        device: {},
-        location: {},
-      };
-    }
-
-    const compartmentFillLevels = Array.isArray(apiBin.compartments)
-      ? apiBin.compartments
-          .map((compartment) => Number(compartment?.fillLevel ?? compartment?.fillPercent))
-          .filter((value) => Number.isFinite(value))
-      : [];
-
-    const directFillLevel = Number(apiBin.fillLevel);
-    const resolvedFillLevel = Number.isFinite(directFillLevel)
-      ? directFillLevel
-      : compartmentFillLevels.length > 0
-        ? Math.max(...compartmentFillLevels)
-        : 0;
-
-    const normalizedStatus =
-      typeof apiBin.status === "object"
-        ? apiBin.status?.isOnline
-          ? "online"
-          : "offline"
-        : String(apiBin.status || "offline").toLowerCase() === "online"
-          ? "online"
-          : "offline";
-
-    const normalizedCompartments = Array.isArray(apiBin.compartments)
-      ? apiBin.compartments.map((compartment) => ({
-          ...compartment,
-          type: compartment.type || compartment.name || "Unknown",
-          fillLevel: Number.isFinite(Number(compartment.fillLevel ?? compartment.fillPercent))
-            ? Number(compartment.fillLevel ?? compartment.fillPercent)
-            : 0,
-        }))
-      : [];
-
-    return {
-      ...apiBin,
-      status: normalizedStatus,
-      fillLevel: Math.min(Math.max(Math.round(resolvedFillLevel), 0), 100),
-      lastSeen: formatDateTime(apiBin.lastSeen || apiBin.status?.lastSeenAt),
-      areaName: apiBin.areaId?.name || "Unassigned",
-      compartments: normalizedCompartments,
-    };
+    return data || null;
   }, [data]);
 
-  const isSynced = String(bin.pairing?.status || "").toLowerCase() === "paired";
+  const safeBin = bin || {
+    publicId: "N/A",
+    name: "Unknown Bin",
+    description: "",
+    status: "offline",
+    fillLevel: 0,
+    lastSeen: "N/A",
+    areaName: "Unassigned",
+    compartments: [],
+    device: {},
+    location: {},
+  };
+
+  const isSynced = String(safeBin.pairing?.status || "").toLowerCase() === "paired";
 
   const deleteMutation = useMutation({
     mutationFn: deleteBin,
@@ -125,10 +64,10 @@ function BinDetailsPage() {
       ) : null}
 
       <PageHeader
-        eyebrow={bin.publicId}
-        title={bin.name}
-        description={bin.description || "No description available"}
-        breadcrumbs={[{ label: "Bins", to: "/bins" }, { label: bin.name || "Bin" }]}
+        eyebrow={safeBin.publicId}
+        title={safeBin.name}
+        description={safeBin.description || "No description available"}
+        breadcrumbs={[{ label: "Bins", to: "/bins" }, { label: safeBin.name || "Bin" }]}
         actions={
           <>
             <button
@@ -172,26 +111,28 @@ function BinDetailsPage() {
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h3 className="text-lg font-semibold text-slate-900">Operational Status</h3>
-                  <BinStatusBadge status={bin.status} />
+                  <BinStatusBadge status={safeBin.status} />
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wider text-slate-500">Fill Level</p>
-                    <p className="mt-2 text-3xl font-semibold text-slate-900">{bin.fillLevel}%</p>
+                    <p className="mt-2 text-3xl font-semibold text-slate-900">
+                      {safeBin.fillLevel}%
+                    </p>
                   </div>
 
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wider text-slate-500">Area</p>
                     <p className="mt-2 text-xl font-semibold text-slate-900">
-                      {bin.areaName || "Unassigned"}
+                      {safeBin.areaName || "Unassigned"}
                     </p>
                   </div>
 
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wider text-slate-500">Last Seen</p>
                     <p className="mt-2 text-xl font-semibold text-slate-900">
-                      {bin.lastSeen || "N/A"}
+                      {safeBin.lastSeen || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -199,13 +140,13 @@ function BinDetailsPage() {
                 <div className="mt-5">
                   <div className="mb-2 flex items-center justify-between text-xs text-slate-500">
                     <span>Overall fill level</span>
-                    <span>{bin.fillLevel}%</span>
+                    <span>{safeBin.fillLevel}%</span>
                   </div>
 
                   <div className="h-3 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className={`h-full rounded-full ${getBarClass(bin.fillLevel)}`}
-                      style={{ width: `${bin.fillLevel}%` }}
+                      className={`h-full rounded-full ${getBarClass(safeBin.fillLevel)}`}
+                      style={{ width: `${safeBin.fillLevel}%` }}
                     />
                   </div>
                 </div>
@@ -218,7 +159,7 @@ function BinDetailsPage() {
                 </div>
 
                 <div className="mt-5 grid gap-4 md:grid-cols-2">
-                  {bin.compartments?.map((compartment) => (
+                  {safeBin.compartments?.map((compartment) => (
                     <div
                       key={compartment.type}
                       className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
@@ -253,7 +194,7 @@ function BinDetailsPage() {
                   <div className="rounded-xl bg-slate-50 p-4">
                     <p className="text-xs uppercase tracking-wider text-slate-500">ESP32 Chip ID</p>
                     <p className="mt-2 text-sm font-semibold text-slate-900">
-                      {bin.device?.esp32ChipId || "N/A"}
+                      {safeBin.device?.esp32ChipId || "N/A"}
                     </p>
                   </div>
 
@@ -262,7 +203,7 @@ function BinDetailsPage() {
                       Firmware Version
                     </p>
                     <p className="mt-2 text-sm font-semibold text-slate-900">
-                      {bin.device?.firmwareVersion || "N/A"}
+                      {safeBin.device?.firmwareVersion || "N/A"}
                     </p>
                   </div>
 
@@ -271,7 +212,7 @@ function BinDetailsPage() {
                       CNN Model Version
                     </p>
                     <p className="mt-2 text-sm font-semibold text-slate-900">
-                      {bin.device?.cnnModelVersion || "N/A"}
+                      {safeBin.device?.cnnModelVersion || "N/A"}
                     </p>
                   </div>
                 </div>
@@ -286,7 +227,7 @@ function BinDetailsPage() {
                 <div className="mt-5 rounded-xl bg-slate-50 p-4">
                   <p className="text-xs uppercase tracking-wider text-slate-500">Address</p>
                   <p className="mt-2 text-sm font-medium text-slate-900">
-                    {bin.location?.address || "No address available"}
+                    {safeBin.location?.address || "No address available"}
                   </p>
                 </div>
 
@@ -326,7 +267,7 @@ function BinDetailsPage() {
       <ConfirmModal
         open={deleteOpen}
         title="Delete bin"
-        description={`Are you sure you want to delete ${bin.name}? This action cannot be undone.`}
+        description={`Are you sure you want to delete ${safeBin.name}? This action cannot be undone.`}
         confirmText="Delete"
         cancelText="Cancel"
         loading={deleteMutation.isPending}

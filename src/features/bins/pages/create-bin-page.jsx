@@ -3,27 +3,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { useNavigate } from "react-router";
-import axiosClient from "@/lib/axios";
 import FormInput from "@/components/ui/input/form-input";
 import FormTextarea from "@/components/ui/input/form-textarea";
 import SearchableSelect from "@/components/ui/input/searchable-select";
 import PageHeader from "@/components/ui/page-header";
 import { createBinSchema } from "@/features/bins/schemas/create-bin-schema";
-
-const getAreas = async () => {
-  const response = await axiosClient.get("/areas");
-  return response.data;
-};
-
-const getAdmins = async () => {
-  const response = await axiosClient.get("/users/admins");
-  return response.data;
-};
-
-const getWorkers = async () => {
-  const response = await axiosClient.get("/users/workers");
-  return response.data;
-};
+import { getAreas } from "@/features/areas/api/get-areas";
+import { getAdmins } from "@/features/users/api/get-admins";
+import { getWorkers } from "@/features/users/api/get-workers";
+import { registerBin } from "@/features/bins/api/register-bin";
+import { syncBin } from "@/features/bins/api/sync-bin";
 
 function getUserOptions(data) {
   const users = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
@@ -38,46 +27,6 @@ function getUserOptions(data) {
     };
   });
 }
-
-const createBin = async (values) => {
-  const hasLatitude =
-    values.latitude !== undefined &&
-    values.latitude !== null &&
-    String(values.latitude).trim() !== "";
-
-  const hasLongitude =
-    values.longitude !== undefined &&
-    values.longitude !== null &&
-    String(values.longitude).trim() !== "";
-
-  const geo =
-    hasLatitude && hasLongitude
-      ? {
-          type: "Point",
-          coordinates: [Number(values.longitude), Number(values.latitude)],
-        }
-      : null;
-
-  const payload = {
-    name: values.name,
-    description: values.description || "",
-    areaId: values.areaId,
-    location: {
-      address: values.address || "",
-      geo,
-    },
-    assignedAdminId: values.assignedAdminId?.trim() || null,
-    assignedWorkerId: values.assignedWorkerId?.trim() || null,
-  };
-
-  const response = await axiosClient.post("/bins/register", payload);
-  return response.data;
-};
-
-const syncBin = async (binId) => {
-  const response = await axiosClient.post(`/bins/${binId}/sync`);
-  return response.data;
-};
 
 function CreateBinPage() {
   const navigate = useNavigate();
@@ -131,7 +80,7 @@ function CreateBinPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: createBin,
+    mutationFn: registerBin,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["bins"] });
       setCreatedBin(data?.data || null);
