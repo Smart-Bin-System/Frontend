@@ -7,9 +7,11 @@ function AuthShell({ title, description, children, footer }) {
       <div className="hidden w-1/2 bg-slate-950 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="p-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-400">
-              <Boxes className="h-6 w-6" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Mihashi Smart Bin logo"
+              className="h-12 w-12 rounded-2xl object-contain"
+            />
             <div>
               <h1 className="text-lg font-semibold">Mihashi&#8217;s Smart Bin</h1>
               <p className="text-sm text-slate-400">Waste Management Console</p>
