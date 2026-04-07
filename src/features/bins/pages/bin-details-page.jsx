@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Cpu, MapPinned, RefreshCw, Trash2, Waypoints } from "lucide-react";
+import { Cpu, MapPinned, RefreshCw, Trash2, Waypoints, X } from "lucide-react";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
 import ConfirmModal from "@/components/ui/modal/confirm-modal";
 import PageHeader from "@/components/ui/page-header";
 import { getBinById } from "@/features/bins/api/get-bin-by-id";
 import { deleteBin } from "@/features/bins/api/delete-bin";
+import { syncBin } from "@/features/bins/api/sync-bin";
 
 function getBarClass(fillLevel) {
   if (fillLevel >= 85) return "bg-rose-500";
@@ -19,6 +20,8 @@ function BinDetailsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pairingCode, setPairingCode] = useState("");
+  const [pairingCodeOpen, setPairingCodeOpen] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["bin", binId],
@@ -45,6 +48,17 @@ function BinDetailsPage() {
 
   const isSynced = String(safeBin.pairing?.status || "").toLowerCase() === "paired";
 
+  const syncMutation = useMutation({
+    mutationFn: syncBin,
+    onSuccess: (response) => {
+      const nextCode = response?.data?.code || response?.code || "";
+      setPairingCode(nextCode);
+      setPairingCodeOpen(Boolean(nextCode));
+      queryClient.invalidateQueries({ queryKey: ["bins"] });
+      queryClient.invalidateQueries({ queryKey: ["bin", binId] });
+    },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteBin,
     onSuccess: () => {
@@ -54,12 +68,27 @@ function BinDetailsPage() {
     },
   });
 
+  const handlePrimaryAction = () => {
+    if (isSynced) {
+      navigate(`/bins/${binId}/edit`);
+      return;
+    }
+
+    syncMutation.mutate(binId);
+  };
+
   return (
     <div className="space-y-6">
       {deleteMutation.isError ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
           {deleteMutation.error?.response?.data?.message ||
             "Failed to delete bin. Please try again."}
+        </div>
+      ) : null}
+
+      {syncMutation.isError ? (
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          {syncMutation.error?.response?.data?.message || "Failed to sync bin. Please try again."}
         </div>
       ) : null}
 
@@ -81,14 +110,11 @@ function BinDetailsPage() {
 
             <button
               type="button"
-              onClick={() => {
-                if (isSynced) {
-                  navigate(`/bins/${binId}/edit`);
-                }
-              }}
+              onClick={handlePrimaryAction}
+              disabled={syncMutation.isPending}
               className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
             >
-              {isSynced ? "Edit Bin" : "Sync Bin"}
+              {isSynced ? "Edit Bin" : syncMutation.isPending ? "Syncing..." : "Sync Bin"}
             </button>
           </>
         }
@@ -245,10 +271,11 @@ function BinDetailsPage() {
                 <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={() => navigate(`/bins/${binId}/edit`)}
+                    onClick={handlePrimaryAction}
+                    disabled={syncMutation.isPending}
                     className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                   >
-                    Edit Bin
+                    {isSynced ? "Edit Bin" : syncMutation.isPending ? "Syncing..." : "Sync Bin"}
                   </button>
                   <button
                     type="button"
@@ -276,6 +303,48 @@ function BinDetailsPage() {
           deleteMutation.mutate(binId);
         }}
       />
+
+      {pairingCodeOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Pairing Code Ready</h3>
+                <p className="mt-2 text-sm text-slate-500">
+                  Use this code on the ESP32 pairing flow before it expires.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPairingCodeOpen(false)}
+                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                Pairing Code
+              </p>
+              <p className="mt-2 text-3xl font-semibold tracking-[0.2em] text-emerald-700">
+                {pairingCode}
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPairingCodeOpen(false)}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
