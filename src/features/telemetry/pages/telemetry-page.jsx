@@ -1,54 +1,22 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, RefreshCw, Signal } from "lucide-react";
-import axiosClient from "@/lib/axios";
+import { Activity, Filter, RefreshCw, Search, Signal } from "lucide-react";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
-
-const fallbackTelemetry = [
-  {
-    _id: "1",
-    publicId: "BIN-9F2A1C",
-    area: "BCI Campus",
-    status: "online",
-    lastSeen: "10 sec ago",
-    temperature: "31°C",
-    signalStrength: "Strong",
-    fillLevel: 74,
-  },
-  {
-    _id: "2",
-    publicId: "BIN-1A7D4K",
-    area: "Library Zone",
-    status: "offline",
-    lastSeen: "25 min ago",
-    temperature: "N/A",
-    signalStrength: "Weak",
-    fillLevel: 32,
-  },
-  {
-    _id: "3",
-    publicId: "BIN-7J4P8T",
-    area: "Food Court",
-    status: "online",
-    lastSeen: "22 sec ago",
-    temperature: "29°C",
-    signalStrength: "Good",
-    fillLevel: 91,
-  },
-];
-
-const getTelemetry = async () => {
-  const response = await axiosClient.get("/telemetry/get");
-  return response.data;
-};
+import { getTelemetry } from "@/features/telemetry/api/get-telemetry";
 
 function TelemetryPage() {
+  const [search, setSearch] = useState("");
+  const [period, setPeriod] = useState("today");
+
+  const normalizedSearch = useMemo(() => search.trim(), [search]);
+
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ["telemetry"],
-    queryFn: getTelemetry,
+    queryKey: ["telemetry", period, normalizedSearch],
+    queryFn: () => getTelemetry({ period, search: normalizedSearch }),
     refetchInterval: 15000,
   });
 
-  const telemetryItems = data?.data || data || fallbackTelemetry;
+  const telemetryItems = Array.isArray(data) ? data : [];
 
   return (
     <div className="space-y-6">
@@ -60,19 +28,45 @@ function TelemetryPage() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+            <Search className="h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by bin name or id..."
+              className="bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
+            />
+          </div>
+
+          <div className="relative">
+            <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <select
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
+              className="rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-10 text-sm font-medium text-slate-700 shadow-sm outline-none transition hover:border-slate-300 focus:border-emerald-500"
+            >
+              <option value="today">Today</option>
+              <option value="3days">Last 3 Days</option>
+              <option value="week">This Week</option>
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {isError && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-          Failed to load telemetry from the API. Showing fallback sample data.
+          Failed to load telemetry from the API. Please try again.
         </div>
       )}
 
@@ -145,6 +139,12 @@ function TelemetryPage() {
               </div>
             </div>
           ))}
+
+          {telemetryItems.length === 0 ? (
+            <div className="xl:col-span-2 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+              No telemetry data found for the selected filters.
+            </div>
+          ) : null}
         </div>
       )}
     </div>
