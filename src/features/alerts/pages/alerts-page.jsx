@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import axiosClient from "@/lib/axios";
+import { getAlerts } from "@/features/alerts/api/get-alerts";
 
 const fallbackAlerts = [
   {
@@ -32,20 +32,21 @@ const fallbackAlerts = [
   },
 ];
 
-const getAlerts = async () => {
-  const response = await axiosClient.get("/alerts");
-  return response.data;
-};
-
 function getSeverityClass(severity) {
-  switch (severity) {
-    case "High":
+  switch ((severity || "").toLowerCase()) {
+    case "critical":
+    case "high":
       return "bg-rose-100 text-rose-700 border-rose-200";
-    case "Medium":
+    case "medium":
       return "bg-amber-100 text-amber-700 border-amber-200";
     default:
       return "bg-slate-100 text-slate-700 border-slate-200";
   }
+}
+
+function capitalizeFirstLetter(value) {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function AlertsPage() {
@@ -54,7 +55,7 @@ function AlertsPage() {
     queryFn: getAlerts,
   });
 
-  const alerts = data?.data || data || fallbackAlerts;
+  const alerts = Array.isArray(data) ? data : fallbackAlerts;
 
   return (
     <div className="space-y-6">
@@ -90,7 +91,7 @@ function AlertsPage() {
         <div className="space-y-4">
           {alerts.map((alert) => (
             <div
-              key={alert._id || `${alert.binId}-${alert.createdAt}`}
+              key={alert.id || alert._id || `${alert.binId}-${alert.createdAt}`}
               className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -105,7 +106,7 @@ function AlertsPage() {
                       <span
                         className={`rounded-full border px-3 py-1 text-xs font-semibold ${getSeverityClass(alert.severity)}`}
                       >
-                        {alert.severity}
+                        {capitalizeFirstLetter(alert.severity)}
                       </span>
                     </div>
 
