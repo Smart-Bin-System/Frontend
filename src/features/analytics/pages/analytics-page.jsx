@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   AreaChart,
   Area,
@@ -19,57 +20,90 @@ import PageHeader from "@/components/ui/page-header";
 import StatusCard from "@/components/ui/card/status-card";
 import SectionCard from "@/components/ui/card/section-card";
 import { BarChart3, ChartNoAxesColumn, Layers3, PieChart as PieChartIcon } from "lucide-react";
-
-const wasteTypesByArea = [
-  { area: "BCI", PET: 240, HDPE: 160, LDPE: 120, PP: 190 },
-  { area: "Library", PET: 130, HDPE: 90, LDPE: 70, PP: 100 },
-  { area: "Food Court", PET: 280, HDPE: 170, LDPE: 150, PP: 210 },
-  { area: "Hostel", PET: 200, HDPE: 120, LDPE: 100, PP: 140 },
-];
-
-const wasteDistributionAreas = [
-  { name: "BCI", value: 31, color: "#10b981" },
-  { name: "Library", value: 16, color: "#3b82f6" },
-  { name: "Food Court", value: 34, color: "#f59e0b" },
-  { name: "Hostel", value: 19, color: "#ef4444" },
-];
-
-const dailyFillingAmounts = [
-  { day: "Mon", amount: 52 },
-  { day: "Tue", amount: 61 },
-  { day: "Wed", amount: 67 },
-  { day: "Thu", amount: 74 },
-  { day: "Fri", amount: 88 },
-  { day: "Sat", amount: 79 },
-  { day: "Sun", amount: 70 },
-];
-
-const mostCollectedWasteTypes = [
-  { type: "PET", collected: 850 },
-  { type: "PP", collected: 640 },
-  { type: "HDPE", collected: 540 },
-  { type: "LDPE", collected: 440 },
-];
-
-const compartmentTrend = [
-  { month: "Jan", PET: 320, HDPE: 210, LDPE: 180, PP: 260 },
-  { month: "Feb", PET: 340, HDPE: 220, LDPE: 190, PP: 270 },
-  { month: "Mar", PET: 380, HDPE: 240, LDPE: 200, PP: 300 },
-  { month: "Apr", PET: 410, HDPE: 250, LDPE: 215, PP: 325 },
-  { month: "May", PET: 430, HDPE: 270, LDPE: 230, PP: 340 },
-];
-
-const fillLevelVsCollections = [
-  { day: "Mon", fill: 48, collections: 12 },
-  { day: "Tue", fill: 62, collections: 15 },
-  { day: "Wed", fill: 57, collections: 13 },
-  { day: "Thu", fill: 74, collections: 18 },
-  { day: "Fri", fill: 81, collections: 21 },
-  { day: "Sat", fill: 68, collections: 16 },
-  { day: "Sun", fill: 72, collections: 17 },
-];
+import { getAnalyticsSummary } from "@/features/analytics/api/get-analytics-summary";
+import { getDailyFillingAmounts } from "@/features/analytics/api/get-daily-filling-amounts";
+import { getWasteTypesByArea } from "@/features/analytics/api/get-waste-types-by-area";
 
 function AnalyticsPage() {
+  const { data: summaryData, isLoading: isSummaryLoading, isError: isSummaryError } = useQuery({
+    queryKey: ["analytics", "summary"],
+    queryFn: getAnalyticsSummary,
+  });
+
+  const { data: dailyData, isLoading: isDailyLoading, isError: isDailyError } = useQuery({
+    queryKey: ["analytics", "daily"],
+    queryFn: getDailyFillingAmounts,
+  });
+
+  const { data: areaData, isLoading: isAreaLoading, isError: isAreaError } = useQuery({
+    queryKey: ["analytics", "area"],
+    queryFn: getWasteTypesByArea,
+  });
+
+  const isLoading = isSummaryLoading || isDailyLoading || isAreaLoading;
+  const isError = isSummaryError || isDailyError || isAreaError;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Performance Insights"
+          title="Analytics"
+          description="Advanced visual insights for waste patterns, area performance, and collection trends."
+          breadcrumbs={[{ label: "Analytics" }]}
+        />
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-sm text-slate-500 shadow-sm">
+          Loading analytics...
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Performance Insights"
+          title="Analytics"
+          description="Advanced visual insights for waste patterns, area performance, and collection trends."
+          breadcrumbs={[{ label: "Analytics" }]}
+        />
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-8 text-sm text-rose-700 shadow-sm">
+          Failed to load analytics data.
+        </div>
+      </div>
+    );
+  }
+
+  const totalCollected = summaryData?.totalCollected || "0.00T";
+  const highestWasteArea = summaryData?.highestWasteArea || "N/A";
+  const mostCollectedType = summaryData?.mostCollectedType || "N/A";
+  const avgDailyFilling = summaryData?.avgDailyFilling || "0%";
+
+  const wasteDistributionAreas = Array.isArray(summaryData?.wasteDistributionAreas)
+    ? summaryData.wasteDistributionAreas
+    : [];
+
+  const mostCollectedWasteTypes = Array.isArray(summaryData?.mostCollectedWasteTypes)
+    ? summaryData.mostCollectedWasteTypes
+    : [];
+
+  const compartmentTrend = Array.isArray(summaryData?.compartmentTrend)
+    ? summaryData.compartmentTrend
+    : [];
+
+  const dailyFillingAmounts = Array.isArray(dailyData?.dailyFillingAmounts)
+    ? dailyData.dailyFillingAmounts
+    : [];
+
+  const fillLevelVsCollections = Array.isArray(dailyData?.fillLevelVsCollections)
+    ? dailyData.fillLevelVsCollections
+    : [];
+
+  const wasteTypesByArea = Array.isArray(areaData)
+    ? areaData
+    : [];
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -82,28 +116,28 @@ function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatusCard
           title="Total Collected"
-          value="2.47T"
+          value={totalCollected}
           description="Across all monitored areas"
           icon={BarChart3}
           iconClassName="bg-emerald-100 text-emerald-700"
         />
         <StatusCard
           title="Highest Waste Area"
-          value="Food Court"
+          value={highestWasteArea}
           description="Leading in total collected waste"
           icon={Layers3}
           iconClassName="bg-amber-100 text-amber-700"
         />
         <StatusCard
           title="Most Collected Type"
-          value="PET"
+          value={mostCollectedType}
           description="Top waste type by volume"
           icon={PieChartIcon}
           iconClassName="bg-sky-100 text-sky-700"
         />
         <StatusCard
           title="Avg Daily Filling"
-          value="70%"
+          value={avgDailyFilling}
           description="Average daily fill rate"
           icon={ChartNoAxesColumn}
           iconClassName="bg-violet-100 text-violet-700"
