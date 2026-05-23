@@ -9,18 +9,26 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { hasPermission } from "@/lib/rbac";
+import { PERMISSIONS } from "@/constants/permissions";
 
 const navItems = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Areas", to: "/areas", icon: Map },
-  { label: "Bins", to: "/bins", icon: Trash2 },
-  { label: "Telemetry", to: "/telemetry", icon: Gauge },
-  { label: "Alerts", to: "/alerts", icon: BellRing },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { label: "Settings", to: "/settings", icon: Settings },
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, permission: PERMISSIONS.VIEW_DASHBOARD },
+  { label: "Areas", to: "/areas", icon: Map, permission: PERMISSIONS.VIEW_AREAS },
+  { label: "Bins", to: "/bins", icon: Trash2, permission: PERMISSIONS.VIEW_BINS },
+  { label: "Telemetry", to: "/telemetry", icon: Gauge, permission: PERMISSIONS.VIEW_TELEMETRY },
+  { label: "Alerts", to: "/alerts", icon: BellRing, permission: PERMISSIONS.VIEW_ALERTS },
+  { label: "Analytics", to: "/analytics", icon: BarChart3, permission: PERMISSIONS.VIEW_ANALYTICS },
+  { label: "Settings", to: "/settings", icon: Settings, permission: PERMISSIONS.VIEW_SETTINGS },
 ];
 
 function Sidebar({ mobileOpen = false, onClose }) {
+  const { user } = useAuth();
+  const allowedNavItems = navItems.filter(
+    (item) => !item.permission || hasPermission(user, item.permission)
+  );
+
   return (
     <>
       {mobileOpen ? (
@@ -61,7 +69,7 @@ function Sidebar({ mobileOpen = false, onClose }) {
         </div>
 
         <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
-          {navItems.map((item) => {
+          {allowedNavItems.map((item) => {
             const Icon = item.icon;
 
             return (
