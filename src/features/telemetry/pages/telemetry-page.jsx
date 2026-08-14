@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Activity, Filter, RefreshCw, Search, Signal } from "lucide-react";
 import BinStatusBadge from "@/features/bins/components/bin-status-badge";
 import { getTelemetry } from "@/features/telemetry/api/get-telemetry";
+import { getFillLevelColor } from "@/constants/chart-colors";
 
 function TelemetryPage() {
   const [search, setSearch] = useState("");
@@ -126,14 +127,11 @@ function TelemetryPage() {
 
                 <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className={`h-full rounded-full ${
-                      item.fillLevel >= 85
-                        ? "bg-rose-500"
-                        : item.fillLevel >= 60
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${item.fillLevel}%` }}
+                    className="h-full rounded-full transition-colors"
+                    style={{
+                      width: `${item.fillLevel}%`,
+                      backgroundColor: getFillLevelColor(item.fillLevel),
+                    }}
                   />
                 </div>
               </div>

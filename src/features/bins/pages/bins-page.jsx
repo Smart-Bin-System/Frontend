@@ -7,12 +7,7 @@ import ActionMenu from "@/components/ui/action-menu";
 import DataTableEmpty from "@/components/ui/table/data-table-empty";
 import PageSkeleton from "@/components/ui/page-skeleton";
 import { getBins } from "@/features/bins/api/get-bins";
-
-function getFillLevelClass(fillLevel) {
-  if (fillLevel >= 85) return "bg-rose-500";
-  if (fillLevel >= 60) return "bg-amber-500";
-  return "bg-emerald-500";
-}
+import { getFillLevelColor } from "@/constants/chart-colors";
 
 function getStatusClass(status) {
   return status === "online" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700";
@@ -126,8 +121,8 @@ function BinsPage() {
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                           <div
-                            className={`h-full rounded-full ${getFillLevelClass(bin.fillLevel)}`}
-                            style={{ width: `${bin.fillLevel}%` }}
+                            className="h-full rounded-full transition-colors"
+                            style={{ width: `${bin.fillLevel}%`, backgroundColor: getFillLevelColor(bin.fillLevel) }}
                           />
                         </div>
                       </div>

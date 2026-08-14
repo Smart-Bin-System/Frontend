@@ -6,6 +6,7 @@ import { getWorkerTasks } from "@/features/dashboard/api/get-worker-tasks";
 import { completeTask } from "@/features/dashboard/api/complete-task";
 import { emptyBinDirectly } from "@/features/dashboard/api/empty-bin";
 import { getBins } from "@/features/bins/api/get-bins";
+import { PLASTIC_CHART_COLORS, getFillLevelColor, getPlasticChartColor } from "@/constants/chart-colors";
 
 const iconMap = {
   Trash2,
@@ -169,9 +170,10 @@ function AdminDashboard() {
 
                     <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="h-full rounded-full bg-emerald-500"
+                        className="h-full rounded-full transition-colors"
                         style={{
                           width: `${uptime}%`,
+                          backgroundColor: PLASTIC_CHART_COLORS.HDPE,
                         }}
                       />
                     </div>
@@ -398,8 +400,11 @@ function WorkerDashboard() {
                             </div>
                             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
                               <div
-                                className={`h-full rounded-full ${c.fillPercent >= 75 ? "bg-rose-500" : "bg-emerald-500"}`}
-                                style={{ width: `${c.fillPercent}%` }}
+                                className="h-full rounded-full transition-colors"
+                                style={{
+                                  width: `${c.fillPercent}%`,
+                                  backgroundColor: getPlasticChartColor(c.name || c.type),
+                                }}
                               />
                             </div>
                           </div>
@@ -454,8 +459,11 @@ function WorkerDashboard() {
 
                   <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className={`h-full rounded-full ${bin.fillLevel >= 75 ? "bg-rose-500" : "bg-emerald-500"}`}
-                      style={{ width: `${bin.fillLevel}%` }}
+                      className="h-full rounded-full transition-colors"
+                      style={{
+                        width: `${bin.fillLevel}%`,
+                        backgroundColor: getFillLevelColor(bin.fillLevel),
+                      }}
                     />
                   </div>
 

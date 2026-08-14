@@ -8,12 +8,7 @@ import PageHeader from "@/components/ui/page-header";
 import { getBinById } from "@/features/bins/api/get-bin-by-id";
 import { deleteBin } from "@/features/bins/api/delete-bin";
 import { syncBin } from "@/features/bins/api/sync-bin";
-
-function getBarClass(fillLevel) {
-  if (fillLevel >= 85) return "bg-rose-500";
-  if (fillLevel >= 60) return "bg-amber-500";
-  return "bg-emerald-500";
-}
+import { getFillLevelColor, getPlasticChartColor } from "@/constants/chart-colors";
 
 function BinDetailsPage() {
   const { binId } = useParams();
@@ -171,8 +166,11 @@ function BinDetailsPage() {
 
                   <div className="h-3 overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className={`h-full rounded-full ${getBarClass(safeBin.fillLevel)}`}
-                      style={{ width: `${safeBin.fillLevel}%` }}
+                      className="h-full rounded-full transition-colors"
+                      style={{
+                        width: `${safeBin.fillLevel}%`,
+                        backgroundColor: getFillLevelColor(safeBin.fillLevel),
+                      }}
                     />
                   </div>
                 </div>
@@ -199,8 +197,11 @@ function BinDetailsPage() {
 
                       <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
                         <div
-                          className={`h-full rounded-full ${getBarClass(compartment.fillLevel)}`}
-                          style={{ width: `${compartment.fillLevel}%` }}
+                          className="h-full rounded-full transition-colors"
+                          style={{
+                            width: `${compartment.fillLevel}%`,
+                            backgroundColor: getPlasticChartColor(compartment.type),
+                          }}
                         />
                       </div>
                     </div>

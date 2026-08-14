@@ -57,7 +57,7 @@ export function normalizeTelemetryItem(item) {
 
   return {
     _id: item?._id,
-    publicId: item?.binId?._id || "Unknown Bin",
+    publicId: item?.binId?.publicId || item?.binId?._id || "Unknown Bin",
     area: item?.binId?.name || "Unassigned Bin",
     status: isOnline ? "online" : "offline",
     lastSeen: formatLastSeen(item?.at),

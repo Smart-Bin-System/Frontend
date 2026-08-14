@@ -23,6 +23,23 @@ import { BarChart3, ChartNoAxesColumn, Layers3, PieChart as PieChartIcon } from 
 import { getAnalyticsSummary } from "@/features/analytics/api/get-analytics-summary";
 import { getDailyFillingAmounts } from "@/features/analytics/api/get-daily-filling-amounts";
 import { getWasteTypesByArea } from "@/features/analytics/api/get-waste-types-by-area";
+import {
+  CHART_THEME,
+  PASTEL_CHART_COLORS,
+  PLASTIC_CHART_COLORS,
+  getPlasticChartColor,
+} from "@/constants/chart-colors";
+
+const axisProps = { stroke: CHART_THEME.axis, tick: { fill: CHART_THEME.axis } };
+const tooltipProps = {
+  contentStyle: {
+    backgroundColor: CHART_THEME.tooltipBackground,
+    borderColor: CHART_THEME.tooltipBorder,
+    borderRadius: 12,
+    color: "#334155",
+  },
+  cursor: { fill: "#F1F5F9", opacity: 0.65 },
+};
 
 function AnalyticsPage() {
   const { data: summaryData, isLoading: isSummaryLoading, isError: isSummaryError } = useQuery({
@@ -152,15 +169,15 @@ function AnalyticsPage() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={wasteTypesByArea}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="area" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid stroke={CHART_THEME.grid} strokeDasharray="3 3" />
+                <XAxis dataKey="area" {...axisProps} />
+                <YAxis {...axisProps} />
+                <Tooltip {...tooltipProps} />
                 <Legend />
-                <Bar dataKey="PET" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="HDPE" fill="#3b82f6" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="LDPE" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="PP" fill="#ef4444" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="PET" fill={PLASTIC_CHART_COLORS.PET} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="HDPE" fill={PLASTIC_CHART_COLORS.HDPE} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="LDPE" fill={PLASTIC_CHART_COLORS.LDPE} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="PP" fill={PLASTIC_CHART_COLORS.PP} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -182,11 +199,14 @@ function AnalyticsPage() {
                   outerRadius={130}
                   label
                 >
-                  {wasteDistributionAreas.map((entry) => (
-                    <Cell key={entry.name} fill={entry.color} />
+                  {wasteDistributionAreas.map((entry, index) => (
+                    <Cell
+                      key={entry.name}
+                      fill={PASTEL_CHART_COLORS[index % PASTEL_CHART_COLORS.length]}
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip {...tooltipProps} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -202,16 +222,16 @@ function AnalyticsPage() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={dailyFillingAmounts}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid stroke={CHART_THEME.grid} strokeDasharray="3 3" />
+                <XAxis dataKey="day" {...axisProps} />
+                <YAxis {...axisProps} />
+                <Tooltip {...tooltipProps} />
                 <Area
                   type="monotone"
                   dataKey="amount"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.18}
+                  stroke={CHART_THEME.fill}
+                  fill={CHART_THEME.fill}
+                  fillOpacity={0.35}
                   strokeWidth={3}
                   name="Filling %"
                 />
@@ -227,11 +247,15 @@ function AnalyticsPage() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={mostCollectedWasteTypes} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis type="number" />
-                <YAxis dataKey="type" type="category" />
-                <Tooltip />
-                <Bar dataKey="collected" fill="#0f172a" radius={[0, 6, 6, 0]} />
+                <CartesianGrid stroke={CHART_THEME.grid} strokeDasharray="3 3" />
+                <XAxis type="number" {...axisProps} />
+                <YAxis dataKey="type" type="category" {...axisProps} />
+                <Tooltip {...tooltipProps} />
+                <Bar dataKey="collected" radius={[0, 6, 6, 0]}>
+                  {mostCollectedWasteTypes.map((entry, index) => (
+                    <Cell key={entry.type} fill={getPlasticChartColor(entry.type, index)} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -246,15 +270,15 @@ function AnalyticsPage() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={compartmentTrend}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid stroke={CHART_THEME.grid} strokeDasharray="3 3" />
+                <XAxis dataKey="month" {...axisProps} />
+                <YAxis {...axisProps} />
+                <Tooltip {...tooltipProps} />
                 <Legend />
-                <Line type="monotone" dataKey="PET" stroke="#10b981" strokeWidth={3} />
-                <Line type="monotone" dataKey="HDPE" stroke="#3b82f6" strokeWidth={3} />
-                <Line type="monotone" dataKey="LDPE" stroke="#f59e0b" strokeWidth={3} />
-                <Line type="monotone" dataKey="PP" stroke="#ef4444" strokeWidth={3} />
+                <Line type="monotone" dataKey="PET" stroke={PLASTIC_CHART_COLORS.PET} strokeWidth={3} />
+                <Line type="monotone" dataKey="HDPE" stroke={PLASTIC_CHART_COLORS.HDPE} strokeWidth={3} />
+                <Line type="monotone" dataKey="LDPE" stroke={PLASTIC_CHART_COLORS.LDPE} strokeWidth={3} />
+                <Line type="monotone" dataKey="PP" stroke={PLASTIC_CHART_COLORS.PP} strokeWidth={3} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -267,13 +291,13 @@ function AnalyticsPage() {
           <div className="h-96">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={fillLevelVsCollections}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid stroke={CHART_THEME.grid} strokeDasharray="3 3" />
+                <XAxis dataKey="day" {...axisProps} />
+                <YAxis {...axisProps} />
+                <Tooltip {...tooltipProps} />
                 <Legend />
-                <Bar dataKey="fill" fill="#10b981" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="collections" fill="#3b82f6" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="fill" fill={CHART_THEME.fill} radius={[6, 6, 0, 0]} />
+                <Bar dataKey="collections" fill={CHART_THEME.collections} radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
